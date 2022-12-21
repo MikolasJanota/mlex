@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "auxiliary.h"
-#define USE_MINISATSIMP
+/* #define USE_MINISATSIMP */
 #ifdef USE_MINISATSIMP
 #include "minisat/simp/SimpSolver.h"
 #else
@@ -39,12 +39,9 @@ class MiniSatExt {
     }
 
 #ifdef USE_MINISATSIMP
-    void freezeVar(Var v) { _solver.freezeVar(v); }
-    void setFrozen(Var v, bool b) { _solver.setFrozen(v, b); }
-    void thaw() { _solver.thaw(); }
+    inline void setFrozen(Var v, bool b) { _solver.setFrozen(v, b); }
 #else
-    void   freezeVar(Var) {}
-    void   thaw() {}
+    inline void setFrozen(Var, bool) {}
 #endif
 
     inline bool addClause(Lit a) { return _solver.addClause(a); }
@@ -73,7 +70,7 @@ class MiniSatExt {
 #ifdef USE_MINISATSIMP
     SimpSolver _solver;
 #else
-    Solver _solver;
+    Solver      _solver;
 #endif
 };
 

@@ -23,7 +23,7 @@ void Encoding::encode_bij() {
     std::vector<SATSPC::Lit> ls;
     for (size_t d = 0; d < n; d++)
         for (size_t r = 0; r < n; r++)
-            d_sat.freezeVar(var(perm(d, r)));
+            d_sat.setFrozen(var(perm(d, r)), true);
 
     for (size_t d = 0; d < n; d++) {
         ls.clear();
