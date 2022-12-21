@@ -7,6 +7,7 @@
 #
 
 set -e
+mkdir -p contrib
 cd contrib
 mkdir cadical 
 cd cadical 

@@ -7,10 +7,18 @@
 #
 set -e
 set -u
-if [ ! -d "cadical" ]; then
-  echo setting up a SAT solver
+mkdir -p contrib
+
+if [ ! -d "contrib/cadical" ]; then
+  echo setting up a cadical SAT solver
   ./setup-cadical.sh
-  echo SAT solver done
+  echo cadical SAT solver done
+fi
+
+if [ ! -d "contrib/minisat" ]; then
+  echo setting up a minisat SAT solver
+  ./setup-minisat.sh
+  echo minisat SAT solver done
 fi
 
 mkdir -p build
