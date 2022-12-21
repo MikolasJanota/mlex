@@ -52,13 +52,11 @@ bool LexminSolver::test_sat_inc(const Encoding::Assignment &assignment) {
     d_assignments.push_back(assignment);
     Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
     const auto &               selector = assumps[0];
-    d_sat->setFrozen(Minisat::var(selector), true);
     d_encoding->encode_pos(assignment, selector);
     const auto res = d_sat->solve(assumps);
     if (!res)
         d_assignments.pop_back();
     d_sat->addClause(res ? selector : ~selector);
-    d_sat->setFrozen(Minisat::var(selector), false);
     return res;
 }
 
