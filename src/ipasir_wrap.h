@@ -53,8 +53,7 @@ class MiniSatExt {
         return f();
     }
 
-    void freezeVar(Var) {}
-    void thaw() {}
+    inline void setFrozen(Var, bool) {}
 
     inline Lit true_lit() const { return _true_lit; }
 
