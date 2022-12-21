@@ -6,6 +6,8 @@
 # Copyright (C) 2021, Mikolas Janota
 #
 
+./setup-contribs.sh
+
 mkdir -p build
 cd build
 cmake -DCMAKE_BUILD_TYPE=Debug ..

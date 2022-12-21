@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "ipasir.h"
-/* #include "lit_funcs.h" */
 #include "minisat/core/SolverTypes.h"
 #include <cassert>
 #include <cstdlib>
@@ -53,30 +52,40 @@ class MiniSatExt {
             add(cl[i]);
         return f();
     }
-    inline Lit  true_lit() const { return _true_lit; }
+
+    void freezeVar(Var) {}
+    void thaw() {}
+
+    inline Lit true_lit() const { return _true_lit; }
+
     inline bool addClause_(Minisat::vec<Minisat::Lit> &cl) {
         return addClause(cl);
     }
+
     inline bool addClause(const std::vector<Minisat::Lit> &cl) {
         for (const auto &l : cl)
             add(l);
         return f();
     }
+
     bool addClause(Minisat::Lit p) {
         add(p);
         return f();
     }
+
     bool addClause(Minisat::Lit p, Minisat::Lit q) {
         add(p);
         add(q);
         return f();
     }
+
     bool addClause(Minisat::Lit p, Minisat::Lit q, Minisat::Lit r) {
         add(p);
         add(q);
         add(r);
         return f();
     }
+
     bool addClause(Minisat::Lit p, Minisat::Lit q, Minisat::Lit r,
                    Minisat::Lit s) {
         add(p);
@@ -85,6 +94,7 @@ class MiniSatExt {
         add(s);
         return f();
     }
+
     inline Minisat::Var fresh() { return ++_nvars; }
     inline bool         is_ok_var(int v) { return 1 <= _nvars && v <= _nvars; }
     int                 nVars() const { return _nvars; }

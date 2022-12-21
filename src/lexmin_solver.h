@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "encoding.h"
-#include "ipasir_wrap.h"
+#include "minisat_ext.h"
 #include "options.h"
 #include <memory>
 #include <vector>

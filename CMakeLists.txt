@@ -61,17 +61,17 @@ add_executable(${CMAKE_PROJECT_NAME} ${CPPSOURCES} ${CSOURCES} ${GENERATED_SOURC
 add_library(cadical STATIC IMPORTED GLOBAL)
 add_library(minisat STATIC IMPORTED GLOBAL)
 
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_IPASIR=1)
-# target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_MINISAT=1)
+# target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_IPASIR=1)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_MINISAT=1)
 
 set_target_properties(minisat PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/minisat/lib/libminisat.a)
+    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a)
 
 set_target_properties(cadical PROPERTIES
     IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/cadical/libcadical.a)
 
-target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC cadical)
-# target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC minisat)
+# target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC cadical)
+target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC minisat)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC ZLIB::ZLIB)
 

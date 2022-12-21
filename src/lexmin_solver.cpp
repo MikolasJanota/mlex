@@ -7,6 +7,7 @@
 #include "lexmin_solver.h"
 #include "auxiliary.h"
 #include "minisat/core/SolverTypes.h"
+#include "minisat_ext_minisat.h"
 #include <cassert>
 #include <math.h>
 #include <vector>
@@ -49,12 +50,14 @@ bool LexminSolver::test_sat(const Encoding::Assignment &assignment) {
 
 bool LexminSolver::test_sat_inc(const Encoding::Assignment &assignment) {
     d_assignments.push_back(assignment);
-    Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
-    const auto &               selector = assumps[0];
+    SATSPC::vec<SATSPC::Lit> assumps(1, mkLit(d_sat->fresh()));
+    const auto &             selector = assumps[0];
+    d_sat->freezeVar(SATSPC::var(selector));
     d_encoding->encode_pos(assignment, selector);
     const auto res = d_sat->solve(assumps);
     if (!res)
         d_assignments.pop_back();
+    d_sat->thaw();
     d_sat->addClause(res ? selector : ~selector);
     return res;
 }
