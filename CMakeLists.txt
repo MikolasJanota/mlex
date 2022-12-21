@@ -66,6 +66,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_MINISAT=1)
 
 set_target_properties(minisat PROPERTIES
     IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a)
+    # IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/minisat/build/debug/lib/libminisat.a)
 
 set_target_properties(cadical PROPERTIES
     IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/cadical/libcadical.a)

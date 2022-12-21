@@ -6,8 +6,12 @@
  */
 #pragma once
 #include "auxiliary.h"
-/* #include "minisat/core/Solver.h" */
+#define USE_MINISATSIMP
+#ifdef USE_MINISATSIMP
 #include "minisat/simp/SimpSolver.h"
+#else
+#include "minisat/core/Solver.h"
+#endif
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
@@ -34,8 +38,14 @@ class MiniSatExt {
         return _solver.solve(assumps);
     }
 
+#ifdef USE_MINISATSIMP
     void freezeVar(Var v) { _solver.freezeVar(v); }
+    void setFrozen(Var v, bool b) { _solver.setFrozen(v, b); }
     void thaw() { _solver.thaw(); }
+#else
+    void   freezeVar(Var) {}
+    void   thaw() {}
+#endif
 
     inline bool addClause(Lit a) { return _solver.addClause(a); }
     inline bool addClause(Lit a, Lit b) { return _solver.addClause(a, b); }
@@ -60,7 +70,11 @@ class MiniSatExt {
     }
 
   private:
+#ifdef USE_MINISATSIMP
     SimpSolver _solver;
+#else
+    Solver _solver;
+#endif
 };
 
 inline void MiniSatExt::new_variables(Var max_id) {

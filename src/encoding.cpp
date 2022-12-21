@@ -21,6 +21,10 @@ inline bool is_true(SATSPC::Lit l, const SATSPC::vec<SATSPC::lbool> &values) {
 void Encoding::encode_bij() {
     const auto               n = d_table.order();
     std::vector<SATSPC::Lit> ls;
+    for (size_t d = 0; d < n; d++)
+        for (size_t r = 0; r < n; r++)
+            d_sat.freezeVar(var(perm(d, r)));
+
     for (size_t d = 0; d < n; d++) {
         ls.clear();
         for (size_t r = 0; r < n; r++)
