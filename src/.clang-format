@@ -1,0 +1,9 @@
+---
+Language:        Cpp
+BasedOnStyle:  llvm
+AllowShortCaseLabelsOnASingleLine: true
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true 
+AlignConsecutiveDeclarations: true
+IndentWidth: 4
+...
