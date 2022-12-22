@@ -10,6 +10,7 @@
 #include "minisat_ext.h"
 #include <cassert>
 #include <math.h>
+#include <memory>
 #include <vector>
 using SATSPC::Lit;
 using SATSPC::mkLit;
@@ -24,17 +25,18 @@ void LexminSolver::solve() {
     const auto n = d_table.order();
     for (size_t row = 0; row < n; row++) {
         for (size_t col = 0; col < n; col++) {
-            if (d_options.verbose)
+            if (d_options.verbose > 1)
                 comment() << row << " " << col << " :";
             bool found = false;
             for (size_t val = 0; !found && val < n; val++) {
                 found = test_sat({row, col, val});
             }
             assert(found);
-            if (d_options.verbose)
+            if (d_options.verbose > 1)
                 std::cout << std::endl;
         }
     }
+    make_solution();
 }
 
 bool LexminSolver::test_sat(const Encoding::Assignment &assignment) {
@@ -42,7 +44,7 @@ bool LexminSolver::test_sat(const Encoding::Assignment &assignment) {
     const auto rv         = d_options.incremental ? test_sat_inc(assignment)
                                                   : test_sat_noinc(assignment);
     d_total_sat_time += read_cpu_time() - start_time;
-    if (d_options.verbose)
+    if (d_options.verbose > 1)
         std::cout << " " << std::get<2>(assignment) << ":"
                   << SHOW_TIME(read_cpu_time() - start_time);
     return rv;
@@ -79,41 +81,13 @@ bool LexminSolver::test_sat_noinc(const Encoding::Assignment &assignment) {
     return res;
 }
 
-void LexminSolver::print_gap(std::ostream &                          output,
-                             const std::vector<std::vector<size_t>> &t) {
+void LexminSolver::make_solution() {
     const auto n = d_table.order();
-    output << "[ " << std::endl;
-    for (size_t row = 0; row < n; row++) {
-        output << "[ ";
-        for (size_t col = 0; col < n; col++) {
-            if (col)
-                output << " , ";
-            output << t[row][col] + 1;
-        }
-        output << "]," << std::endl;
-        ;
-    }
-    output << "]" << std::endl;
-}
-
-void LexminSolver::print_mace(std::ostream &                          output,
-                              const std::vector<std::vector<size_t>> &t) {
-    const auto n = d_table.order();
-    output << "interpretation( " << n << ", [" << d_table.get_additional_info()
-           << "], [" << std::endl;
-    output << "  function(" << d_table.get_name() << "(_,_), [" << std::endl;
-    for (size_t row = 0; row < n; row++) {
-        output << "    ";
-        for (size_t col = 0; col < n; col++) {
-            if (col)
-                output << ",";
-            output << t[row][col];
-        }
-        if (row + 1 < n)
-            output << "," << std::endl;
-        ;
-    }
-    output << "])])." << std::endl;
+    d_solution   = std::make_unique<BinaryFunction>(n);
+    d_solution->set_name(d_table.get_name());
+    d_solution->set_additional_info(d_table.get_additional_info());
+    for (const auto &[row, col, val] : d_assignments)
+        d_solution->set(row, col, val);
 }
 
 void LexminSolver::print_solution(std::ostream &output) {
@@ -128,8 +102,8 @@ void LexminSolver::print_solution(std::ostream &output) {
         t[row][col] = val;
     }
     if (d_options.mace_format)
-        print_mace(output, t);
+        d_solution->print_mace(output);
     else
-        print_gap(output, t);
+        d_solution->print_gap(output);
 }
 

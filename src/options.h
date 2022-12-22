@@ -11,4 +11,5 @@ struct Options {
     int verbose     = 0;
     int incremental = 0;
     int mace_format = 0;
+    int unique      = 0;
 };

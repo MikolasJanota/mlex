@@ -11,6 +11,7 @@
 #include "options.h"
 #include "read_gap.h"
 #include "read_mace.h"
+#include "trie.h"
 #include "version.h"
 #include <cstdlib>
 #include <iostream>
@@ -33,6 +34,8 @@ int main(int argc, char **argv) {
     app.add_flag("-i", options.incremental, "Use incremental SAT solving.")
         ->default_val(0);
     app.add_flag("-v", options.verbose, "add verbosity")->default_val(1);
+    app.add_flag("-u", options.unique, "output only unique models")
+        ->default_val(0);
     app.add_flag("-m", options.mace_format, "use mace format for input/output")
         ->default_val(0);
     CLI11_PARSE(app, argc, argv);
@@ -71,14 +74,38 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+std::ostream &comment(const Options &options) {
+    return std::cout << (options.mace_format ? '%' : '#') << " ";
+}
+
 static void
 solve_more(const Options &                                     options,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
+    std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
+    std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
+    const auto                                   start_time = read_cpu_time();
     for (const auto &table : tables) {
         LexminSolver solver(options, *table);
         solver.solve();
-        solver.print_solution(cout);
+        if (options.unique) {
+            if (mt->add(*(solver.solution()))) {
+                unique_solutions.push_back(std::move(solver.solution()));
+                assert(solver.solution().get() == nullptr);
+                if (options.verbose)
+                    comment(options)
+                        << "added: " << unique_solutions.back()->order() << " "
+                        << unique_solutions.back()->get_additional_info()
+                        << std::endl;
+            }
+        } else {
+            solver.print_solution(cout);
+        }
     }
+    if (options.unique)
+        for (const auto &table : unique_solutions)
+            table->print_mace(cout);
+    std::cout << " Total time : " << SHOW_TIME(read_cpu_time() - start_time)
+              << std::endl;
 }
 
 static void solve(const Options &options, const BinaryFunction &table) {
