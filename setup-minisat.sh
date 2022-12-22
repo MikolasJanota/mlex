@@ -11,7 +11,7 @@ mkdir -p contrib
 cd contrib
 mkdir minisat 
 cd minisat 
-git clone git@github.com:agurfinkel/minisat.git
+git clone https://github.com/agurfinkel/minisat.git
 cd minisat 
 make config prefix=..
 make -j4 install
