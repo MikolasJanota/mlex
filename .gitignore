@@ -1,5 +1,6 @@
 contrib
 build
+Session.vim
 
 # Prerequisites
 *.d
