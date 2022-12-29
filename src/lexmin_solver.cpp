@@ -32,51 +32,51 @@ void LexminSolver::solve() {
     }
 
     const auto n = d_table.order();
+
+    d_assignments.clear();
+    d_assignments.reserve(n * n);
+
     for (size_t row = 0; row < n; row++) {
         for (size_t col = 0; col < n; col++) {
+            d_assignments.push_back({row, col, 0});
             TRACE(d_output.comment(3) << row << " " << col << " :";);
-            bool found = false;
-            for (size_t val = 0; !found && val < n; val++) {
-                found = test_sat({row, col, val});
+            auto &current_assignment = d_assignments.back();
+            auto &cur_val            = std::get<2>(current_assignment);
+            while (!test_sat()) {
+                cur_val++;
+                assert(cur_val < n);
             }
-            assert(found);
             TRACE(d_output.ccomment(3) << std::endl;);
         }
     }
     make_solution();
 }
 
-bool LexminSolver::test_sat(const Encoding::Assignment &assignment) {
+bool LexminSolver::test_sat() {
     const auto start_time = read_cpu_time();
-    const auto rv         = d_options.incremental ? test_sat_inc(assignment)
-                                                  : test_sat_noinc(assignment);
+    const auto rv = d_options.incremental ? test_sat_inc() : test_sat_noinc();
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
-    TRACE(d_output.ccomment(3) << " " << std::get<2>(assignment) << ":"
-                               << SHOW_TIME(read_cpu_time() - start_time););
+    TRACE(d_output.ccomment(3)
+              << " " << std::get<2>(d_assignments.back()) << ":"
+              << SHOW_TIME(read_cpu_time() - start_time););
     return rv;
 }
 
-bool LexminSolver::test_sat_inc(const Encoding::Assignment &assignment) {
-    d_assignments.push_back(assignment);
+bool LexminSolver::test_sat_inc() {
     Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
     const auto &               selector = assumps[0];
-    d_encoding->encode_pos(assignment, selector);
+    d_encoding->encode_pos(d_assignments.back(), selector);
     const auto res = d_sat->solve(assumps);
-    if (!res)
-        d_assignments.pop_back();
     d_sat->addClause(res ? selector : ~selector);
     return res;
 }
 
-bool LexminSolver::test_sat_noinc(const Encoding::Assignment &assignment) {
-    d_assignments.push_back(assignment);
+bool LexminSolver::test_sat_noinc() {
     d_sat      = std::make_unique<SATSPC::MiniSatExt>();
     d_encoding = std::make_unique<Encoding>(d_options, *d_sat, d_table);
     d_encoding->encode(d_assignments);
     const auto res = d_sat->solve();
-    if (!res)
-        d_assignments.pop_back();
     d_encoding.reset();
     d_sat.reset();
     return res;

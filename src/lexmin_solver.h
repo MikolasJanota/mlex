@@ -30,10 +30,12 @@ class LexminSolver {
     std::unique_ptr<BinaryFunction>     d_solution;
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<Encoding>           d_encoding;
-    bool                                test_sat(const Encoding::Assignment &);
-    bool test_sat_noinc(const Encoding::Assignment &);
-    bool test_sat_inc(const Encoding::Assignment &);
+
     std::vector<Encoding::Assignment> d_assignments;
+
+    bool test_sat();
+    bool test_sat_noinc();
+    bool test_sat_inc();
 
     void make_solution();
 };
