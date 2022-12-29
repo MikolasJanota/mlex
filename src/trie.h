@@ -33,9 +33,4 @@ class ModelTrie {
 
     /** Auxiliary recursive function for cleanup. */
     void freeRec(ModelTrieNode *n);
-
-    /** Add master values  starting from index  to a given subtree. The
-     * cardinality represents the number of non-blank elements left. */
-    std::pair<bool, ModelTrieNode *> addRec(ModelTrieNode *n, size_t index,
-                                            const BinaryFunction &m);
 };
