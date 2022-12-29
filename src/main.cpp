@@ -14,6 +14,7 @@
 #include "statistics.h"
 #include "trie.h"
 #include "version.h"
+#include <cstddef>
 #include <cstdlib>
 #include <iostream>
 #include <stdlib.h>
@@ -67,12 +68,12 @@ int main(int argc, char **argv) {
         reader.read();
         if (!use_std)
             gzclose(in);
-        statistics.readingTime->inc(read_cpu_time()-start_time);
+        statistics.readingTime->inc(read_cpu_time() - start_time);
         solve_more(output, reader.functions());
     } else {
         ReadGAP reader(in);
         reader.read();
-        statistics.readingTime->inc(read_cpu_time()-start_time);
+        statistics.readingTime->inc(read_cpu_time() - start_time);
         if (!reader.has_f()) {
             puts("function not read");
             exit(EXIT_FAILURE);
@@ -95,10 +96,21 @@ solve_more(Output &                                            output,
     auto &                     options(output.d_options);
     std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
+
+    size_t counter = 0;
+    size_t lastp   = 0;
+
     for (const auto &table : tables) {
+        const size_t p = (100 * counter) / tables.size();
+        if (p != lastp && (p % 10) == 0) {
+            output.comment() << "done: " << p << "%" << std::endl;
+            lastp = p;
+        }
+
         output.comment(1) << "solving " << table->get_name()
                           << " order:" << table->order() << " "
                           << table->get_additional_info() << std::endl;
+
         LexminSolver solver(output, *table);
         solver.solve();
         if (options.unique) {
@@ -113,6 +125,7 @@ solve_more(Output &                                            output,
         } else {
             solver.print_solution(cout);
         }
+        counter++;
     }
     if (options.unique) {
         for (const auto &table : unique_solutions)
