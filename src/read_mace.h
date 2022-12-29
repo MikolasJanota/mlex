@@ -13,16 +13,18 @@
 
 #include "binary_function.h"
 #include "fmtutils.hh"
+#include "options.h"
 
 class ReadMace {
   public:
-    explicit ReadMace(gzFile &input_file);
+    ReadMace(Output &output, gzFile &input_file);
     void                                                read();
     const std::vector<std::unique_ptr<BinaryFunction>> &functions() const {
         return d_functions;
     }
 
   private:
+    Output &                                     d_output;
     gzFile                                       d_input_file;
     std::vector<std::unique_ptr<BinaryFunction>> d_functions;
 };

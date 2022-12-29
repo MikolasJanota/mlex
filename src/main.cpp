@@ -11,6 +11,7 @@
 #include "options.h"
 #include "read_gap.h"
 #include "read_mace.h"
+#include "statistics.h"
 #include "trie.h"
 #include "version.h"
 #include <cstdlib>
@@ -19,46 +20,55 @@
 #include <string>
 
 using namespace std;
-static void prn_header();
-static void solve(const Options &, const BinaryFunction &);
+static void prn_header(Output &);
+static void solve(Output &, const BinaryFunction &);
 static void
-solve_more(const Options &                                     options,
+solve_more(Output &                                            options,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables);
 
 int main(int argc, char **argv) {
-    prn_header();
-    CLI::App    app("Lexicography smallest automorphic model.");
-    Options     options;
+    CLI::App          app("Lexicography smallest automorphic model.");
+    Options           options;
+    StatisticsManager statistics;
+    Output            output(options, statistics);
+
     std::string file_name;
     app.add_option("file_name", file_name, "file name")->default_val("-");
     app.add_flag("-i", options.incremental, "Use incremental SAT solving.")
-        ->default_val(0);
-    app.add_flag("-v", options.verbose, "add verbosity")->default_val(1);
+        ->default_val(true);
+    app.add_flag("-v", options.verbose, "add verbosity")->default_val(0);
     app.add_flag("-u", options.unique, "output only unique models")
         ->default_val(0);
     app.add_flag("-m", options.mace_format, "use mace format for input/output")
         ->default_val(0);
     CLI11_PARSE(app, argc, argv);
+    options.comment_prefix = options.mace_format ? "%" : "#";
 
     const bool use_std = file_name == "-";
     gzFile in = use_std ? gzdopen(0, "rb") : gzopen(file_name.c_str(), "rb");
+
     if (argc == 1)
-        puts("c Reading from standard input.");
+        output.comment() << "Reading from standard input." << std::endl;
+
+    output.comment(1) << "incrementality: "
+                      << (options.incremental ? "true" : "false") << std::endl;
+    output.comment(1) << "verbosity: " << options.verbose << std::endl;
 
     if (in == NULL) {
         printf("ERROR! Could not open file: %s\n",
                argc == 1 ? "<stdin>" : argv[1]);
         exit(EXIT_FAILURE);
     }
+    prn_header(output);
 
+    const auto start_time = read_cpu_time();
     if (options.mace_format) {
-        ReadMace reader(in);
+        ReadMace reader(output, in);
         reader.read();
         if (!use_std)
             gzclose(in);
-        solve_more(options, reader.functions());
+        solve_more(output, reader.functions());
     } else {
-
         ReadGAP reader(in);
         reader.read();
         if (!reader.has_f()) {
@@ -69,64 +79,65 @@ int main(int argc, char **argv) {
             gzclose(in);
 
         const auto &f = reader.f();
-        solve(options, f);
+        solve(output, f);
     }
+    statistics.totalTime->inc(read_cpu_time() - start_time);
+    for (const auto s : statistics.all)
+        s->print(output.comment()) << std::endl;
     return EXIT_SUCCESS;
 }
 
-std::ostream &comment(const Options &options) {
-    return std::cout << (options.mace_format ? '%' : '#') << " ";
-}
-
 static void
-solve_more(const Options &                                     options,
+solve_more(Output &                                            output,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
+    auto &                     options(output.d_options);
     std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
-    const auto                                   start_time = read_cpu_time();
     for (const auto &table : tables) {
-        LexminSolver solver(options, *table);
+        output.comment(1) << "solving " << table->get_name()
+                          << " order:" << table->order() << " "
+                          << table->get_additional_info() << std::endl;
+        LexminSolver solver(output, *table);
         solver.solve();
         if (options.unique) {
             if (mt->add(*(solver.solution()))) {
                 unique_solutions.push_back(std::move(solver.solution()));
                 assert(solver.solution().get() == nullptr);
-                if (options.verbose)
-                    comment(options)
-                        << "added: " << unique_solutions.back()->order() << " "
-                        << unique_solutions.back()->get_additional_info()
-                        << std::endl;
+                output.comment(2)
+                    << "added: " << unique_solutions.back()->order() << " "
+                    << unique_solutions.back()->get_additional_info()
+                    << std::endl;
             }
         } else {
             solver.print_solution(cout);
         }
     }
-    if (options.unique)
+    if (options.unique) {
         for (const auto &table : unique_solutions)
             table->print_mace(cout);
-    std::cout << " Total time : " << SHOW_TIME(read_cpu_time() - start_time)
-              << std::endl;
+    }
 }
 
-static void solve(const Options &options, const BinaryFunction &table) {
-    LexminSolver solver(options, table);
+static void solve(Output &output, const BinaryFunction &table) {
+    LexminSolver solver(output, table);
     solver.solve();
     solver.print_solution(cout);
 }
 
-void prn_header() {
-    cout << "# mlex, v00.0, " << Version::GIT_SHA1 << ", " << Version::GIT_DATE
-         << endl;
-    cout << "# (C) 2022 Mikolas Janota, mikolas.janota@gmail.com" << endl;
+void prn_header(Output &output) {
+    output.comment() << "mlex, v00.0, " << Version::GIT_SHA1 << ", "
+                     << Version::GIT_DATE << endl;
+    output.comment() << "(C) 2022 Mikolas Janota, mikolas.janota@gmail.com"
+                     << endl;
 #ifdef USE_IPASIR
-    cout << "# solver IPASIR (cadical)" << endl;
+    output.comment() << "solver IPASIR (cadical)" << endl;
 #endif /*USE_IPASIR*/
 #ifdef USE_MINISAT
-    cout << "# solver MINISAT" << endl;
+    output.comment() << "solver MINISAT" << endl;
 #endif /*USE_MINISAT*/
 #ifndef NDEBUG
-    cout << "# DEBUG version (don't use for computationally heavy "
-            "instances)."
-         << endl;
+    output.comment() << "DEBUG version (don't use for computationally heavy "
+                        "instances)."
+                     << endl;
 #endif
 }

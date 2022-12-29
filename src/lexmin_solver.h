@@ -13,8 +13,9 @@
 
 class LexminSolver {
   public:
-    LexminSolver(const Options &options, const BinaryFunction &table)
-        : d_options(options), d_table(table) {}
+    LexminSolver(Output &output, const BinaryFunction &table)
+        : d_output(output), d_options(output.d_options),
+          d_statistics(output.d_statistics), d_table(table) {}
     void solve();
 
     void print_solution(std::ostream &output);
@@ -22,8 +23,9 @@ class LexminSolver {
     std::unique_ptr<BinaryFunction> &solution() { return d_solution; }
 
   private:
+    Output &                            d_output;
     const Options &                     d_options;
-    double                              d_total_sat_time = 0;
+    StatisticsManager &                 d_statistics;
     const BinaryFunction &              d_table;
     std::unique_ptr<BinaryFunction>     d_solution;
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
@@ -34,10 +36,4 @@ class LexminSolver {
     std::vector<Encoding::Assignment> d_assignments;
 
     void make_solution();
-    void print_gap(std::ostream &output);
-    void print_mace(std::ostream &output);
-
-    std::ostream &comment() {
-        return std::cout << (d_options.mace_format ? '%' : '#') << " ";
-    }
 };

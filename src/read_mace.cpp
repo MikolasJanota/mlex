@@ -13,7 +13,8 @@
 
 #include "fmtutils.hh"
 
-ReadMace::ReadMace(gzFile &input_file) : d_input_file(input_file) {}
+ReadMace::ReadMace(Output &output, gzFile &input_file)
+    : d_output(output), d_input_file(input_file) {}
 
 static void skip(StreamBuffer &sb) {
     while (1) {
@@ -95,10 +96,8 @@ void ReadMace::read() {
             }
         }
         match_chars(in, "])]).");
-#ifndef NDEBUG
-        std::cout << "% read function " << f->get_name()
-                  << " order:" << f->order() << " " << f->get_additional_info()
-                  << std::endl;
-#endif
+        d_output.comment(1)
+            << "read function " << f->get_name() << " order:" << f->order()
+            << " " << f->get_additional_info() << std::endl;
     }
 }
