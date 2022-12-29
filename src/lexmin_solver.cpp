@@ -15,6 +15,15 @@
 using SATSPC::Lit;
 using SATSPC::mkLit;
 
+#ifdef NDEBUG
+#define TRACE(code)
+#else
+#define TRACE(code)                                                            \
+    do {                                                                       \
+        code                                                                   \
+    } while (0)
+#endif
+
 void LexminSolver::solve() {
     if (d_options.incremental) {
         d_sat      = std::make_unique<SATSPC::MiniSatExt>();
@@ -25,13 +34,13 @@ void LexminSolver::solve() {
     const auto n = d_table.order();
     for (size_t row = 0; row < n; row++) {
         for (size_t col = 0; col < n; col++) {
-            d_output.comment(3) << row << " " << col << " :";
+            TRACE(d_output.comment(3) << row << " " << col << " :";);
             bool found = false;
             for (size_t val = 0; !found && val < n; val++) {
                 found = test_sat({row, col, val});
             }
             assert(found);
-            d_output.ccomment(3) << std::endl;
+            TRACE(d_output.ccomment(3) << std::endl;);
         }
     }
     make_solution();
@@ -43,8 +52,8 @@ bool LexminSolver::test_sat(const Encoding::Assignment &assignment) {
                                                   : test_sat_noinc(assignment);
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
-    d_output.ccomment(3) << " " << std::get<2>(assignment) << ":"
-                         << SHOW_TIME(read_cpu_time() - start_time);
+    TRACE(d_output.ccomment(3) << " " << std::get<2>(assignment) << ":"
+                               << SHOW_TIME(read_cpu_time() - start_time););
     return rv;
 }
 
