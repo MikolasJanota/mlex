@@ -37,7 +37,7 @@ static inline double read_cpu_time() {
 }
 #endif
 
-#define SHOW_TIME(t) std::fixed << std::setprecision(2) << (t)
+#define SHOW_TIME(t) std::fixed << std::setprecision(4) << (t)
 
 template <class K, class V>
 bool contains(const std::unordered_map<K, V> &es, const K &e) {
