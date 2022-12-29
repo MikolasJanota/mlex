@@ -14,6 +14,7 @@ class StatisticsManager {
     StatisticsManager() {
         all.push_back(satCalls = new IntStatistic("SAT calls"));
         all.push_back(satTime = new DoubleStatistic("SAT time"));
+        all.push_back(readingTime = new DoubleStatistic("Reading time"));
         all.push_back(totalTime = new DoubleStatistic("Total time"));
     }
 
@@ -63,6 +64,7 @@ class StatisticsManager {
     };
     IntStatistic *           satCalls;
     DoubleStatistic *        satTime;
+    DoubleStatistic *        readingTime;
     DoubleStatistic *        totalTime;
     std::vector<Statistic *> all;
 };

@@ -67,10 +67,12 @@ int main(int argc, char **argv) {
         reader.read();
         if (!use_std)
             gzclose(in);
+        statistics.readingTime->inc(read_cpu_time()-start_time);
         solve_more(output, reader.functions());
     } else {
         ReadGAP reader(in);
         reader.read();
+        statistics.readingTime->inc(read_cpu_time()-start_time);
         if (!reader.has_f()) {
             puts("function not read");
             exit(EXIT_FAILURE);

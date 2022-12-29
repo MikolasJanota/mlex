@@ -37,4 +37,3 @@ bool ModelTrie::add(const BinaryFunction &m) {
     }
     return added;
 }
-
