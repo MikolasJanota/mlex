@@ -2,5 +2,8 @@ main.fls
 main.log
 main.out
 main.pdf
-makeenv
+main.aux
+main.fdb_latexmk
+main.synctex.gz
 Session.vim
+makeenv

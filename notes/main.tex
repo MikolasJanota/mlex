@@ -51,9 +51,9 @@ Then, the equality~\eqref{eq:pi} yields the following implications.
 I implemented it to reduce unnecessary clauses.}
 
 \begin{align}
-  \left(\xpi{d_1}{i}\land\xpi{d_2}{j}\right)\Rightarrow\xpi{f(d_1, d_2)}{k}\text{ for } d_1\neq d_2\in D
-  \text{ if } i=j\\
-  \xpi{d}{i}\Rightarrow\xpi{f(d, d)}{k}\text{ for } d\in D \text{ if } i\neq j
+  & \left(\xpi{d_1}{i}\land\xpi{d_2}{j}\right)\Rightarrow\xpi{f(d_1, d_2)}{k} \text{ for } d_1\neq d_2\in D
+ &   \text{ if } i=j\\
+  &  \xpi{d}{i}\Rightarrow\xpi{f(d, d)}{k} \text{ for } d\in D  & \text{ if } i\neq j
 \end{align}
 
 Note that $f$ does not explicitly appear in the encoding as $f(d_1, d_2)$ is evaluated in encoding time.
