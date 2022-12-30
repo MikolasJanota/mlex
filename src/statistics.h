@@ -5,6 +5,7 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -41,7 +42,8 @@ class StatisticsManager {
         double get() const { return d_val; }
 
         virtual std::ostream &print(std::ostream &o) override {
-            return o << name() << " : " << d_val;
+            return o << name() << " : " << std::fixed << std::setprecision(3)
+                     << d_val;
         }
 
       private:

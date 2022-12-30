@@ -17,8 +17,10 @@
 #include <string.h>
 #define OUT std::cout
 
-#define __PL   (std::cerr << __FILE__ << ":" << __LINE__ << std::endl).flush();
+#define __PL (std::cerr << __FILE__ << ":" << __LINE__ << std::endl).flush();
+
 #define SATSPC Minisat
+
 #define VERIFY(condition)                                                      \
     do {                                                                       \
         if (condition)                                                         \
@@ -28,16 +30,18 @@
     } while (0)
 
 #ifdef __MINGW32__
-static inline double read_cpu_time() { return 0; }
+inline double read_cpu_time() { return 0; }
 #else
-static inline double read_cpu_time() {
+inline double read_cpu_time() {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     return (double)ru.ru_utime.tv_sec + (double)ru.ru_utime.tv_usec / 1000000;
 }
 #endif
 
-#define SHOW_TIME(t) std::fixed << std::setprecision(4) << (t)
+#define SHOW_TIME(t)  std::fixed << std::setprecision(4) << (t)
+#define SHOW_TIME2(t) std::fixed << std::setprecision(2) << (t)
+#define SHOW_TIME0(t) std::fixed << std::setprecision(0) << (t)
 
 template <class K, class V>
 bool contains(const std::unordered_map<K, V> &es, const K &e) {

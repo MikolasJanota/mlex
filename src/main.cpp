@@ -24,8 +24,9 @@ using namespace std;
 static void prn_header(Output &);
 static void solve(Output &, const BinaryFunction &);
 static void
-solve_more(Output &                                            options,
-           const std::vector<std::unique_ptr<BinaryFunction>> &tables);
+              solve_more(Output &                                            options,
+                         const std::vector<std::unique_ptr<BinaryFunction>> &tables);
+static double start_time;
 
 int main(int argc, char **argv) {
     CLI::App          app("Lexicography smallest automorphic model.");
@@ -62,7 +63,7 @@ int main(int argc, char **argv) {
     }
     prn_header(output);
 
-    const auto start_time = read_cpu_time();
+    start_time = read_cpu_time();
     if (options.mace_format) {
         ReadMace reader(output, in);
         reader.read();
@@ -93,17 +94,28 @@ int main(int argc, char **argv) {
 static void
 solve_more(Output &                                            output,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
-    auto &                     options(output.d_options);
+    auto &options(output.d_options);
+
     std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
 
     size_t counter = 0;
     size_t lastp   = 0;
 
+    if (options.verbose == 0)
+        output.comment() << "Done:";
+
     for (const auto &table : tables) {
         const size_t p = (100 * counter) / tables.size();
         if (p != lastp && (p % 10) == 0) {
-            output.comment() << "done: " << p << "%" << std::endl;
+            if (options.verbose == 0) {
+                (output.ccomment()
+                 << " " << p << "%"
+                 << " (" << SHOW_TIME0(read_cpu_time() - start_time) << "s)")
+                    .flush();
+            } else {
+                output.comment() << "done: " << p << "%" << std::endl;
+            }
             lastp = p;
         }
 
@@ -127,6 +139,9 @@ solve_more(Output &                                            output,
         }
         counter++;
     }
+    if (options.verbose == 0)
+        output.ccomment() << std::endl;
+
     if (options.unique) {
         for (const auto &table : unique_solutions)
             table->print_mace(cout);
