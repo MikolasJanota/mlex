@@ -1,0 +1,102 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{todonotes}
+%--------------------------------------
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\usepackage{geometry,tabularx,fancyhdr}
+\title{Finding Lexicographically Smallest Isomorphic Model by SAT}
+\author{Mikol\'a\v{s} Janota}
+\newcommand{\xpi}[2]{x_{{#1}\rightarrow{#2}}} 
+\usepackage[ruled,vlined]{algorithm2e}
+\DontPrintSemicolon%
+\SetKwFunction{SAT}{SAT}
+
+\begin{document}
+\maketitle
+
+\section{Encoding}
+
+Given an $f$ on $D^2\rightarrow D$ with $D=1..n$ we are looking for an $f'$ that is
+isomorphic to $f$ and is lexicographically smallest. We use repeated calls
+to a SAT solver to calculate $f'$.
+
+The crucial part of the encoding is to decide if there is an $f'$ isomorphic to
+$f$ such that a specific value can be placed in a specific position of the
+multiplication table of $f'$. We denote this requirement as follows.
+
+\begin{equation}\label{eq:given}
+  f'(i,j)\mapsto k, \text{ for some  given } i,j,k\in D
+\end{equation}
+
+Equation~\eqref{eq:given}  is equivalent to deciding the existence of a permutation $\pi$ such that
+
+\begin{equation}\label{eq:pi}
+  \pi\left(f(\pi^{-1}(i),\pi^{-1}(j))\right) = k
+\end{equation}
+
+To translate to SAT, introduce Boolean variables $\xpi{d}{r}$ representing
+whether $\pi(d)=r$, for $d,r\in D$. To ensure that these variables represent a
+bijection, introduce the following constraints (cardinality constraints are
+converted to CNF by standard means).
+
+\begin{align}
+  \sum_{d\in D} \xpi{d}{r}=1, \text{ for } r\in D\\
+  \sum_{r\in D} \xpi{d}{r}=1, \text{ for } d\in D
+\end{align}
+
+Then, the equality~\eqref{eq:pi} yields the following implications.
+\todo{We don't really need this case-split for the presentation but this is how
+I implemented it to reduce unnecessary clauses.}
+
+\begin{align}
+  \left(\xpi{d_1}{i}\land\xpi{d_2}{j}\right)\Rightarrow\xpi{f(d_1, d_2)}{k}\text{ for } d_1\neq d_2\in D
+  \text{ if } i=j\\
+  \xpi{d}{i}\Rightarrow\xpi{f(d, d)}{k}\text{ for } d\in D \text{ if } i\neq j
+\end{align}
+
+Note that $f$ does not explicitly appear in the encoding as $f(d_1, d_2)$ is evaluated in encoding time.
+
+\subsection{Finding the Model}
+To find the lexicographically  smallest model $f'$ isomorphic to $f$ we
+gradually fill in the multiplication table of $f'$, trying the smaller values
+first as shown in Algorithm~\ref{algorithm:basic}.  It first tries placing $1$
+in the top left corner and if that is possible  it moves onto the  next cell. If
+it is not possible,  is tries placing 2 in the top left corner, and so forth.
+Once  it finds that it is possible to place a certain value in a cell,
+it is required to stay there for the rest of the course of the algorithm.
+
+%%%%%%%%%%%%%%%%%%%%%
+\input{basic_algo}%%%
+%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Possible Improvements and Extensions}
+
+Algorithm~\ref{algorithm:basic} suffers from a high number of SAT calls; it is
+$\Omega(|D|^3)$ in the worst case (for quasigroups  for instance). Some special
+cases can be identified.
+
+ \begin{itemize}
+   \item  If every line/column of the given $f$ is a permutation then $f'$ must
+     have the same property
+   \item The first row of $f'$  must be a permutation of one of the rows $r$
+     that maximizes the number of elements $r$.
+   \item The top left corner is 1 iff $f$ has at least one idempotent.
+     Combining it is with the previous condition  could possibly determine which row gets
+     swapped into  the first one.
+   \item Once the row of $f'$ is filled in, we can look at  some of its
+     characteristics and identify it in $f$.  Such characteristics  could for
+     instance be  number of elements $f(i, j)=i$, $f(i, j)=j$, etc.  Maybe it
+     has some sort of a well-known name?  Relation to symmetries?
+ \end{itemize}
+
+Because the lexicographically  smallest model is unique, it can be used to
+decide homomorphism between models. There we don't care in which order the
+multiplication table is traversed. This means that we can run
+Algorithm~\ref{algorithm:basic} in a completely different order that fixes the
+permutation $\pi$ more quickly.
+
+
+\end{document}
