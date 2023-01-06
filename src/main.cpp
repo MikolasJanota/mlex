@@ -24,20 +24,23 @@ using namespace std;
 static void prn_header(Output &);
 static void solve(Output &, const BinaryFunction &);
 static void
-              solve_more(Output &                                            options,
-                         const std::vector<std::unique_ptr<BinaryFunction>> &tables);
+solve_more(Output &options,
+           const std::vector<std::unique_ptr<BinaryFunction>> &tables);
 static double start_time;
 
 int main(int argc, char **argv) {
-    CLI::App          app("Lexicography smallest automorphic model.");
-    Options           options;
+    CLI::App app("Lexicography smallest automorphic model.");
+    Options options;
     StatisticsManager statistics;
-    Output            output(options, statistics);
+    Output output(options, statistics);
 
     std::string file_name;
     app.add_option("file_name", file_name, "file name")->default_val("-");
     app.add_flag("-i", options.incremental, "Use incremental SAT solving.")
         ->default_val(true);
+    app.add_flag("-1", options.opt1stRow,
+                 "Try to optimize for the first row of the table.")
+        ->default_val(false);
     app.add_flag("-v", options.verbose, "add verbosity")->default_val(0);
     app.add_flag("-u", options.unique, "output only unique models")
         ->default_val(0);
@@ -92,7 +95,7 @@ int main(int argc, char **argv) {
 }
 
 static void
-solve_more(Output &                                            output,
+solve_more(Output &output,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
     auto &options(output.d_options);
 

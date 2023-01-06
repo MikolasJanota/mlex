@@ -11,7 +11,7 @@
 #include "seq_counter.h"
 #include <sstream>
 
-inline void atm1(SATSPC::MiniSatExt &            sat,
+inline void atm1(SATSPC::MiniSatExt &sat,
                  const std::vector<SATSPC::Lit> &literals) {
     LOGIPASIR(std::cout << "atm1 { ";
               for (const auto &literal
@@ -28,7 +28,7 @@ inline void atm1(SATSPC::MiniSatExt &            sat,
     LOGIPASIR(std::cout << "end atm1" << std::endl;);
 }
 
-inline void eq1(SATSPC::MiniSatExt &            sat,
+inline void eq1(SATSPC::MiniSatExt &sat,
                 const std::vector<SATSPC::Lit> &literals) {
     atm1(sat, literals);
     sat.addClause(literals);
@@ -37,9 +37,10 @@ inline void eq1(SATSPC::MiniSatExt &            sat,
 class Encoding {
   public:
     typedef std::tuple<size_t, size_t, size_t> Assignment;
-    Encoding(const Options &options, SATSPC::MiniSatExt &sat,
+    Encoding(Output &output, SATSPC::MiniSatExt &sat,
              const BinaryFunction &table)
-        : d_options(options), d_sat(sat), d_table(table) {
+        : d_output(output), d_options(output.d_options),
+          d_statistics(output.d_statistics), d_sat(sat), d_table(table) {
         LOGIPASIR(d_sat.set_representatives(&d_representatives););
     }
 
@@ -50,9 +51,11 @@ class Encoding {
     void encode_pos(const Assignment &val, SATSPC::Lit selector);
 
   private:
-    const Options &                              d_options;
-    SATSPC::MiniSatExt &                         d_sat;
-    const BinaryFunction &                       d_table;
+    Output &d_output;
+    const Options &d_options;
+    StatisticsManager &d_statistics;
+    SATSPC::MiniSatExt &d_sat;
+    const BinaryFunction &d_table;
     std::unordered_map<std::string, SATSPC::Lit> d_representatives;
 
     SATSPC::Lit get_representative(const std::string &name) {
@@ -67,7 +70,10 @@ class Encoding {
     }
 
   public:
-    SATSPC::Lit perm(size_t a, size_t b) {
+    /*  try to infer additional constraints on the first row */
+    void opt1stRow();
+
+    inline SATSPC::Lit perm(size_t a, size_t b) {
         std::stringstream sts;
         sts << "p_" << a << "_" << b;
         return get_representative(sts.str());

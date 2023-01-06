@@ -27,7 +27,7 @@ using SATSPC::mkLit;
 void LexminSolver::solve() {
     if (d_options.incremental) {
         d_sat      = std::make_unique<SATSPC::MiniSatExt>();
-        d_encoding = std::make_unique<Encoding>(d_options, *d_sat, d_table);
+        d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
         d_encoding->encode_bij();
     }
 
@@ -65,7 +65,7 @@ bool LexminSolver::test_sat() {
 
 bool LexminSolver::test_sat_inc() {
     Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
-    const auto &               selector = assumps[0];
+    const auto &selector = assumps[0];
     d_encoding->encode_pos(d_assignments.back(), selector);
     const auto res = d_sat->solve(assumps);
     d_sat->addClause(res ? selector : ~selector);
@@ -74,7 +74,7 @@ bool LexminSolver::test_sat_inc() {
 
 bool LexminSolver::test_sat_noinc() {
     d_sat      = std::make_unique<SATSPC::MiniSatExt>();
-    d_encoding = std::make_unique<Encoding>(d_options, *d_sat, d_table);
+    d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
     d_encoding->encode(d_assignments);
     const auto res = d_sat->solve();
     d_encoding.reset();

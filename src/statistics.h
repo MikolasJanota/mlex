@@ -13,6 +13,7 @@
 class StatisticsManager {
   public:
     StatisticsManager() {
+        all.push_back(unique1stRow = new IntStatistic("unique 1st row"));
         all.push_back(satCalls = new IntStatistic("SAT calls"));
         all.push_back(satTime = new DoubleStatistic("SAT time"));
         all.push_back(readingTime = new DoubleStatistic("Reading time"));
@@ -64,9 +65,10 @@ class StatisticsManager {
       private:
         int d_val;
     };
-    IntStatistic *           satCalls;
-    DoubleStatistic *        satTime;
-    DoubleStatistic *        readingTime;
-    DoubleStatistic *        totalTime;
+    IntStatistic *satCalls;
+    IntStatistic *unique1stRow;
+    DoubleStatistic *satTime;
+    DoubleStatistic *readingTime;
+    DoubleStatistic *totalTime;
     std::vector<Statistic *> all;
 };

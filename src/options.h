@@ -27,10 +27,11 @@ class null_out_stream : public std::ostream {
 };
 
 struct Options {
-    int         verbose = 0;
-    bool        incremental;
-    int         mace_format    = 0;
-    int         unique         = 0;
+    int verbose = 0;
+    bool incremental;
+    int mace_format            = 0;
+    int unique                 = 0;
+    bool opt1stRow             = 0;
     std::string comment_prefix = "#";
 };
 
@@ -53,7 +54,7 @@ class Output {
         else
             return cnul;
     };
-    const Options &    d_options;
+    const Options &d_options;
     StatisticsManager &d_statistics;
 };
 
