@@ -98,6 +98,7 @@ static void
 solve_more(Output &output,
            const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
     auto &options(output.d_options);
+    auto &statistics(output.d_statistics);
 
     std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
@@ -109,6 +110,7 @@ solve_more(Output &output,
         output.comment() << "Done:";
 
     for (const auto &table : tables) {
+        statistics.readModels->inc();
         const size_t p = (100 * counter) / tables.size();
         if (p != lastp && (p % 10) == 0) {
             if (options.verbose == 0) {
@@ -138,6 +140,7 @@ solve_more(Output &output,
                     << std::endl;
             }
         } else {
+            statistics.producedModels->inc();
             solver.print_solution(cout);
         }
         counter++;
@@ -146,8 +149,10 @@ solve_more(Output &output,
         output.ccomment() << std::endl;
 
     if (options.unique) {
-        for (const auto &table : unique_solutions)
+        for (const auto &table : unique_solutions) {
             table->print_mace(cout);
+            statistics.producedModels->inc();
+        }
     }
 }
 
