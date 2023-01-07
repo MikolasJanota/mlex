@@ -30,21 +30,37 @@ void LexminSolver::solve() {
         d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
         d_encoding->encode_bij();
     }
+    if (d_options.budgeting)
+        calculate_basic_budgets();
 
     const auto n = d_table.order();
 
     d_assignments.clear();
     d_assignments.reserve(n * n);
 
+    std::vector<size_t> current_row_budget;
     for (size_t row = 0; row < n; row++) {
+        if (d_options.budgeting) {
+            assert(d_rowBudget.size() == n);
+            current_row_budget = d_rowBudget;
+        }
         for (size_t col = 0; col < n; col++) {
             d_assignments.push_back({row, col, 0});
             TRACE(d_output.comment(3) << row << " " << col << " :";);
             auto &current_assignment = d_assignments.back();
             auto &cur_val            = std::get<2>(current_assignment);
-            while (!test_sat()) {
-                cur_val++;
+            while (true) {
                 assert(cur_val < n);
+                const bool found =
+                    d_options.budgeting
+                        ? current_row_budget[cur_val] && test_sat()
+                        : test_sat();
+                if (d_options.budgeting && found)
+                    current_row_budget[cur_val]--;
+
+                if (found)
+                    break;
+                cur_val++;
             }
             TRACE(d_output.ccomment(3) << std::endl;);
         }
@@ -80,6 +96,26 @@ bool LexminSolver::test_sat_noinc() {
     d_encoding.reset();
     d_sat.reset();
     return res;
+}
+
+void LexminSolver::calculate_basic_budgets() {
+    const auto n          = d_table.order();
+    size_t maxOccurrences = 0;
+    std::vector<size_t> occurrences;
+    for (auto row = n; row--;) {
+        occurrences.clear();
+        occurrences.resize(n, 0);
+        for (auto col = n; col--;)
+            occurrences[d_table.get(row, col)]++;
+        for (auto val : occurrences)
+            if (val > maxOccurrences)
+                maxOccurrences = val;
+    }
+    d_output.comment(2) << "max occurrence per row: " << maxOccurrences
+                        << std::endl;
+    assert(d_rowBudget.empty());
+    d_rowBudget.clear();
+    d_rowBudget.resize(n, maxOccurrences);
 }
 
 void LexminSolver::make_solution() {

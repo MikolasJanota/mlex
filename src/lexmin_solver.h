@@ -23,19 +23,21 @@ class LexminSolver {
     std::unique_ptr<BinaryFunction> &solution() { return d_solution; }
 
   private:
-    Output &                            d_output;
-    const Options &                     d_options;
-    StatisticsManager &                 d_statistics;
-    const BinaryFunction &              d_table;
-    std::unique_ptr<BinaryFunction>     d_solution;
+    Output &d_output;
+    const Options &d_options;
+    StatisticsManager &d_statistics;
+    const BinaryFunction &d_table;
+    std::unique_ptr<BinaryFunction> d_solution;
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
-    std::unique_ptr<Encoding>           d_encoding;
+    std::unique_ptr<Encoding> d_encoding;
 
     std::vector<Encoding::Assignment> d_assignments;
+    std::vector<size_t> d_rowBudget;
 
     bool test_sat();
     bool test_sat_noinc();
     bool test_sat_inc();
 
     void make_solution();
+    void calculate_basic_budgets();
 };
