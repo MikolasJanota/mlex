@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     app.add_flag("-1", options.opt1stRow,
                  "Try to optimize for the first row of the table.")
         ->default_val(false);
-    app.add_flag("-b", options.budgeting, " budgeting.")->default_val(false);
+    app.add_flag("-b", options.budgeting, "budgeting.")->default_val(false);
     app.add_flag("-v", options.verbose, "add verbosity")->default_val(0);
     app.add_flag("-u", options.unique, "output only unique models")
         ->default_val(0);

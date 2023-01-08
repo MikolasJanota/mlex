@@ -98,4 +98,25 @@ multiplication table is traversed. This means that we can run
 Algorithm~\ref{algorithm:basic} in a completely different order that fixes the
 permutation $\pi$ more quickly.
 
+\subsection{Counting}
+\newcommand{\invariants}{\mathcal{R}} 
+\newcommand{\invariant}{I} 
+
+Calculate the bag of invariants $\invariants$ of the rows of the original table. Whenever
+a row $r$ of the new table is filled, calculate its invariant $\invariant_r$
+ and carry out the following steps.
+\begin{enumerate}
+  \item  If $\invariant_r$ corresponds to a unique row $k$ in the bag
+    $\invariants$, then set $\pi(k)=r$.
+  \item Remove $\invariant_r$ from $\invariants$. If  the multiplicity of
+    $\invariant_r$ in $\invariants$ drops to 0, then mark all original rows
+    corresponding to the invariant $\invariant_r$ as \emph{used}  (their images will
+    not appear anymore in the new table).
+  \item  While ignoring used rows, calculate the maximum number of occurrences
+    per row of all $i$ for which $\pi(i) = j$;  conclude that $j$ has the same
+    maximum number or occurrences per row in the upcoming rows of the new table.
+     For all other elements, calculate the maximum number of occurrences over
+     all such elements in unused rows.
+\end{enumerate}
+
 \end{document}
