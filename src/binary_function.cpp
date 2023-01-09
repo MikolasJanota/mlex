@@ -28,7 +28,7 @@ void BinaryFunction::print_gap(std::ostream &output) {
                 output << " , ";
             output << get(row, col) + 1;
         }
-        output << "]," << std::endl;
+        output << " ]," << std::endl;
         ;
     }
     output << "]" << std::endl;

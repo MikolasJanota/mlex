@@ -80,6 +80,7 @@ int main(int argc, char **argv) {
     } else {
         ReadGAP reader(in);
         reader.read();
+        statistics.readModels->inc();
         statistics.readingTime->inc(read_cpu_time() - start_time);
         if (!reader.has_f()) {
             puts("function not read");
@@ -163,6 +164,7 @@ static void solve(Output &output, const BinaryFunction &table) {
     LexminSolver solver(output, table);
     solver.solve();
     solver.print_solution(cout);
+    output.d_statistics.producedModels->inc();
 }
 
 void prn_header(Output &output) {

@@ -18,4 +18,12 @@ void Invariants::calculate() {
         auto [it, _] = d_invariants.insert({iinv, Info()});
         it->second.original_rows.push_back(row);
     }
+    if (d_options.verbose > 2) {
+        for (const auto &[inv, info] : d_invariants) {
+            d_output.comment(3) << "inv " << inv << " {";
+            for (const auto k : info.original_rows)
+                d_output.ccomment(3) << " " << k;
+            d_output.ccomment(3) << " }" << std::endl;
+        }
+    }
 }

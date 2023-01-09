@@ -39,6 +39,7 @@ class LexminSolver {
     std::vector<size_t> d_fixed;
     std::vector<bool> d_used;
     bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
+    std::optional<size_t> d_0preImage;
 
     Invariants d_invariants;
 

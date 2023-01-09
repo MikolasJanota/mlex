@@ -53,12 +53,14 @@ void LexminSolver::solve() {
             calc.set_row(row);
 
         if (d_options.budgeting) {
-            assert(d_rowBudget.size() == n);
-            if (row == 1 && is_fixed(0)) {
-                // mark first row as used
-                d_used[0] = true;
-                calculate_budgets();
+            if (row == 1 && d_0preImage) {
+                // mark preimage of first row as used
+                if (!d_used[*d_0preImage]) {
+                    d_used[*d_0preImage] = true;
+                    calculate_budgets();
+                }
             }
+            assert(d_rowBudget.size() == n);
             current_row_budget = d_rowBudget;
         }
 
@@ -92,6 +94,12 @@ void LexminSolver::solve() {
             if (info.used == info.original_rows.size()) {
                 for (auto k : info.original_rows)
                     d_used[k] = true;
+                if (d_options.verbose > 2) {
+                    d_output.comment(3) << "used {";
+                    for (const auto k : info.original_rows)
+                        d_output.ccomment(3) << " " << k;
+                    d_output.ccomment(3) << " }" << std::endl;
+                }
 
                 for (size_t j = row + 1; j < n; j++)
                     for (auto k : info.original_rows)
@@ -102,6 +110,7 @@ void LexminSolver::solve() {
                     d_output.comment(2) << info.original_rows.back()
                                         << " fixed to " << row << std::endl;
                 }
+
                 if (d_options.budgeting)
                     calculate_budgets();
             }
@@ -170,7 +179,8 @@ void LexminSolver::opt1stRow() {
 
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
-        d_fixed[0] = maxRow;
+        d_fixed[maxRow] = 0;
+        d_0preImage = maxRow;
     }
 
     assert(count_can_be_first);
