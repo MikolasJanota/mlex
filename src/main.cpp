@@ -47,6 +47,8 @@ int main(int argc, char **argv) {
         ->default_val(0);
     app.add_flag("-m", options.mace_format, "use mace format for input/output")
         ->default_val(0);
+    app.add_flag("-r", options.invariants, "use row invariants")
+        ->default_val(0);
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
 
@@ -105,7 +107,7 @@ solve_more(Output &output,
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
 
     size_t counter = 0;
-    size_t lastp   = 0;
+    size_t lastp = 0;
 
     if (options.verbose == 0)
         output.comment() << "Done:";

@@ -29,10 +29,11 @@ class null_out_stream : public std::ostream {
 struct Options {
     int verbose = 0;
     bool incremental;
-    int mace_format;
+    bool mace_format;
     int unique;
     bool opt1stRow;
     int budgeting;
+    bool invariants;
     std::string comment_prefix = "#";
 };
 

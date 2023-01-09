@@ -28,11 +28,17 @@ void LexminSolver::solve() {
     const auto n = d_table.order();
     d_fixed.resize(n, n);
     d_used.resize(n, false);
+
+    if (d_options.invariants) {
+        d_invariants.calculate();
+    }
+
     if (d_options.incremental) {
         d_sat = std::make_unique<SATSPC::MiniSatExt>();
         make_encoding();
         d_encoding->encode_bij();
     }
+
     if (d_options.budgeting) {
         calculate_budgets();
     }
@@ -40,8 +46,12 @@ void LexminSolver::solve() {
     d_assignments.clear();
     d_assignments.reserve(n * n);
 
+    InvariantCalculator calc(n);
     std::vector<size_t> current_row_budget;
     for (size_t row = 0; row < n; row++) {
+        if (d_options.invariants)
+            calc.set_row(row);
+
         if (d_options.budgeting) {
             assert(d_rowBudget.size() == n);
             if (row == 1 && is_fixed(0)) {
@@ -70,7 +80,31 @@ void LexminSolver::solve() {
                     break;
                 cur_val++;
             }
+            if (d_options.invariants)
+                calc.set_val(col, cur_val);
             TRACE(d_output.ccomment(3) << std::endl;);
+        }
+
+        if (d_options.invariants && row + 1 < n) {
+            auto inv = calc.make_ivec();
+            auto &info = d_invariants.get(inv);
+            info.used++;
+            if (info.used == info.original_rows.size()) {
+                for (auto k : info.original_rows)
+                    d_used[k] = true;
+
+                for (size_t j = row + 1; j < n; j++)
+                    for (auto k : info.original_rows)
+                        d_sat->addClause(~d_encoding->perm(k, j));
+
+                if (info.used == 1) {
+                    d_fixed[info.original_rows.back()] = row;
+                    d_output.comment(2) << info.original_rows.back()
+                                        << " fixed to " << row << std::endl;
+                }
+                if (d_options.budgeting)
+                    calculate_budgets();
+            }
         }
     }
     make_solution();
@@ -99,6 +133,9 @@ void LexminSolver::opt1stRow() {
     for (auto i = d_table.order(); i--;)
         if (d_table.get(i, i) == i)
             idems.push_back(i);
+
+    if (idems.empty())
+        return; // TODO
 
     // only idempotents can be at 1st row, if any
     const bool hasIdem = !idems.empty();

@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "encoding.h"
+#include "invariants.h"
 #include "minisat_ext.h"
 #include "options.h"
 #include <memory>
@@ -15,7 +16,8 @@ class LexminSolver {
   public:
     LexminSolver(Output &output, const BinaryFunction &table)
         : d_output(output), d_options(output.d_options),
-          d_statistics(output.d_statistics), d_table(table) {}
+          d_statistics(output.d_statistics), d_table(table),
+          d_invariants(output, table) {}
     void solve();
 
     void print_solution(std::ostream &output);
@@ -37,6 +39,8 @@ class LexminSolver {
     std::vector<size_t> d_fixed;
     std::vector<bool> d_used;
     bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
+
+    Invariants d_invariants;
 
     void make_encoding();
     bool test_sat();

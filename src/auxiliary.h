@@ -75,7 +75,7 @@ inline bool erase(std::vector<bool> &es, int e) {
     if (ix >= es.size())
         return false;
     const bool rv = es[ix];
-    es[ix]        = false;
+    es[ix] = false;
     return rv;
 }
 
@@ -85,10 +85,10 @@ inline bool insert(std::vector<bool> &es, int e) {
     if (ix >= es.size())
         es.resize(ix + 1, false);
     const bool rv = es[ix];
-    es[ix]        = e;
+    es[ix] = e;
     return rv;
 }
 
-template <class K> bool contains(const std::unordered_set<K> &es, const K &e) {
-    return es.find(e) != es.end();
+template <class M, class K> bool contains(const M &m, const K &e) {
+    return m.find(e) != m.end();
 }

@@ -1,5 +1,5 @@
 /*
- * File:  BinaryFunction.hh
+ * File:  BinaryFunction.h
  * Author:  mikolas
  * Created on:  Fri Aug 7 17:05:36 WEST 2020
  * Copyright (C) 2020, Mikolas Janota
@@ -25,8 +25,8 @@ class BinaryFunction {
 
     size_t order() const { return _order; }
 
-    void        print(std::ostream &out) const;
-    void        set_name(const std::string &s) { _name = s; }
+    void print(std::ostream &out) const;
+    void set_name(const std::string &s) { _name = s; }
     std::string get_name() const { return _name; }
     void set_additional_info(const std::string &s) { _additional_info = s; }
     std::string get_additional_info() const { return _additional_info; }
@@ -35,8 +35,8 @@ class BinaryFunction {
     void print_mace(std::ostream &output);
 
   private:
-    const size_t        _order;
-    std::string         _name;
-    std::string         _additional_info;
+    const size_t _order;
+    std::string _name;
+    std::string _additional_info;
     std::vector<size_t> _values;
 };
