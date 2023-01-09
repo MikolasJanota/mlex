@@ -50,6 +50,8 @@ class Encoding {
     void encode(const std::vector<Assignment> &assignments);
     void encode_pos(const Assignment &val, SATSPC::Lit selector);
 
+    bool is_unique_row1() const { return d_unique_row1; }
+
   private:
     Output &d_output;
     const Options &d_options;
@@ -57,6 +59,8 @@ class Encoding {
     SATSPC::MiniSatExt &d_sat;
     const BinaryFunction &d_table;
     std::unordered_map<std::string, SATSPC::Lit> d_representatives;
+
+    bool d_unique_row1 = false;
 
     SATSPC::Lit get_representative(const std::string &name) {
         const auto index = d_representatives.find(name);
@@ -70,9 +74,6 @@ class Encoding {
     }
 
   public:
-    /*  try to infer additional constraints on the first row */
-    void opt1stRow();
-
     inline SATSPC::Lit perm(size_t a, size_t b) {
         std::stringstream sts;
         sts << "p_" << a << "_" << b;

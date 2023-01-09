@@ -34,10 +34,17 @@ class LexminSolver {
     std::vector<Encoding::Assignment> d_assignments;
     std::vector<size_t> d_rowBudget;
 
+    std::vector<size_t> d_fixed;
+    std::vector<bool> d_used;
+    bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
+
+    void make_encoding();
     bool test_sat();
     bool test_sat_noinc();
     bool test_sat_inc();
 
+    /*  try to infer additional constraints on the first row */
+    void opt1stRow();
     void make_solution();
-    void calculate_basic_budgets();
+    void calculate_budgets();
 };
