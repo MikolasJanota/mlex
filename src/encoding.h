@@ -42,6 +42,7 @@ class Encoding {
         : d_output(output), d_options(output.d_options),
           d_statistics(output.d_statistics), d_sat(sat), d_table(table) {
         LOGIPASIR(d_sat.set_representatives(&d_representatives););
+        setup_perms();
     }
 
     void print_solution(std::ostream &output);
@@ -50,8 +51,6 @@ class Encoding {
     void encode(const std::vector<Assignment> &assignments);
     void encode_pos(const Assignment &val, SATSPC::Lit selector);
 
-    bool is_unique_row1() const { return d_unique_row1; }
-
   private:
     Output &d_output;
     const Options &d_options;
@@ -59,8 +58,6 @@ class Encoding {
     SATSPC::MiniSatExt &d_sat;
     const BinaryFunction &d_table;
     std::unordered_map<std::string, SATSPC::Lit> d_representatives;
-
-    bool d_unique_row1 = false;
 
     SATSPC::Lit get_representative(const std::string &name) {
         const auto index = d_representatives.find(name);
@@ -74,9 +71,22 @@ class Encoding {
     }
 
   public:
-    inline SATSPC::Lit perm(size_t a, size_t b) {
-        std::stringstream sts;
-        sts << "p_" << a << "_" << b;
-        return get_representative(sts.str());
+    inline SATSPC::Lit perm(size_t a, size_t b) const { return d_perms[a][b]; }
+
+    inline void setup_perms() {
+        const auto n = d_table.order();
+        d_perms.resize(n);
+        for (auto dom = n; dom--;) {
+            auto &row = d_perms[dom];
+            row.resize(n, SATSPC::lit_Error);
+            for (auto rng = n; rng--;) {
+                std::stringstream sts;
+                sts << "p_" << dom << "_" << rng;
+                row[rng] = get_representative(sts.str());
+            }
+        }
     }
+
+  private:
+    std::vector<std::vector<SATSPC::Lit>> d_perms;
 };
