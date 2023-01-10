@@ -49,6 +49,8 @@ int main(int argc, char **argv) {
         ->default_val(0);
     app.add_flag("-r", options.invariants, "use row invariants")
         ->default_val(0);
+    app.add_flag("-l", options.last_solution, "Check last solution to see that this value is already possible.")
+        ->default_val(false);
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
 

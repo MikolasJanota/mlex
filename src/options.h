@@ -34,6 +34,7 @@ struct Options {
     bool opt1stRow;
     int budgeting;
     bool invariants;
+    bool last_solution;
     std::string comment_prefix = "#";
 };
 

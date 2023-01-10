@@ -67,4 +67,11 @@ class LexminSolver {
 
     // returns whether updates should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
+
+    std::vector<size_t> d_last_permutation;
+    std::vector<size_t> d_inv_last_permutation;
+    void make_last_permutation();
+    size_t get_preimage(size_t i) const;
+    size_t get_image(size_t i) const;
+    size_t get_val(size_t row, size_t col) const;
 };

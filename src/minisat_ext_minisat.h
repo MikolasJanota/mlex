@@ -56,7 +56,7 @@ class MiniSatExt {
 
     inline bool addClause(const std::vector<SATSPC::Lit> &cl) {
         SATSPC::vec<SATSPC::Lit> ls(cl.size());
-        int                      i = 0;
+        int i = 0;
         for (const auto l : cl)
             ls[i++] = l;
         return _solver.addClause_(ls);
@@ -66,11 +66,20 @@ class MiniSatExt {
         return v < _solver.model.size() ? _solver.model[v] : l_Undef;
     }
 
+    inline Minisat::lbool eval_lit(const Minisat::Lit &l) const {
+        const Minisat::lbool lval = get_model_value(var(l));
+        return lval == Minisat::l_Undef
+                   ? Minisat::l_Undef
+                   : (Minisat::sign(l) == (lval == Minisat::l_False)
+                          ? Minisat::l_True
+                          : Minisat::l_False);
+    }
+
   private:
 #ifdef USE_MINISATSIMP
     SimpSolver _solver;
 #else
-    Solver      _solver;
+    Solver _solver;
 #endif
 };
 

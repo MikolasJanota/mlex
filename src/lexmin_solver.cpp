@@ -75,6 +75,8 @@ void LexminSolver::solve() {
         assert(!budgeting || current_row_budget.size() == n);
 
         for (size_t col = 0; col < n; col++) {
+            const bool has_last_eval = !d_last_permutation.empty();
+            const auto last_val = has_last_eval ? get_val(row, col) : -1;
             assert(!budgeting || cols_budget[col].size() == n);
             d_assignments.push_back({row, col, 0});
             auto &cur_val = std::get<2>(d_assignments.back());
@@ -91,8 +93,17 @@ void LexminSolver::solve() {
                     budgeting && (current_row_budget[cur_val] == 0 ||
                                   d_total_budget[cur_val] == 0 ||
                                   cols_budget[col][cur_val] == 0);
+                found = !skip && has_last_eval && last_val == cur_val;
+                if (found) {
+                    TRACE(ccomment(3) << " " << cur_val << ":FREE";);
+                    if (d_options.incremental)
+                        d_encoding->encode_pos(d_assignments.back(),
+                                               SATSPC::lit_Undef);
 
-                found = !skip && test_sat();
+                } else {
+                    found = !skip && test_sat();
+                }
+
                 if (budgeting && found) {
                     current_row_budget[cur_val]--;
                     d_total_budget[cur_val]--;
@@ -122,6 +133,49 @@ void LexminSolver::solve() {
     }
 
     make_solution();
+}
+
+void LexminSolver::make_last_permutation() {
+    const auto n = d_table.order();
+    d_last_permutation.assign(n, -1);
+    d_inv_last_permutation.assign(n, -1);
+    for (auto dom = n; dom--;) {
+        bool found = false;
+        for (auto rng = n; !found && rng--;)
+            if (d_sat->eval_lit(d_encoding->perm(dom, rng)) == SATSPC::l_True) {
+                d_last_permutation[dom] = rng;
+                d_inv_last_permutation[rng] = dom;
+                found = true;
+            }
+        assert(found);
+    }
+}
+
+/* size_t LexminSolver::get_preimage(size_t i) { */
+/*     const auto n = d_table.order(); */
+/*     for (auto j = n; j--;) */
+/*         if (d_sat->eval_lit(d_encoding->perm(j, i)) == SATSPC::l_True) */
+/*             return j; */
+/*     for (size_t r = 0; r < n; r++) { */
+/*         comment(2) << r; */
+/*         for (size_t s = 0; s < n; s++) { */
+/*             const auto v = d_sat->eval_lit(d_encoding->perm(r, s)); */
+/*             ccomment(2) << " " */
+/*                         << (v == SATSPC::l_True */
+/*                                 ? "+" */
+/*                                 : (v == SATSPC::l_False ? "-" : "?")); */
+/*         } */
+/*         ccomment(2) << std::endl; */
+/*     } */
+/*     assert(false); */
+/*     return -1; */
+/* } */
+
+size_t LexminSolver::get_val(size_t row, size_t col) const {
+    const auto row_preim = d_inv_last_permutation[row];
+    const auto col_preim = d_inv_last_permutation[col];
+    const auto val = d_table.get(row_preim, col_preim);
+    return d_last_permutation[val];
 }
 
 bool LexminSolver::process_invariant(const InvariantVector &invv,
@@ -160,6 +214,8 @@ bool LexminSolver::test_sat() {
     const auto rv = d_options.incremental ? test_sat_inc() : test_sat_noinc();
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
+    if (d_options.last_solution && rv)
+        make_last_permutation();
     TRACE(ccomment(3) << " " << std::get<2>(d_assignments.back()) << ":"
                       << SHOW_TIME(read_cpu_time() - start_time););
     return rv;

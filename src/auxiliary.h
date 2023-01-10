@@ -39,9 +39,16 @@ inline double read_cpu_time() {
 }
 #endif
 
-#define SHOW_TIME(t)  std::fixed << std::setprecision(4) << (t)
+#define SHOW_TIME1(t) std::fixed << std::setprecision(1) << (t)
 #define SHOW_TIME2(t) std::fixed << std::setprecision(2) << (t)
+#define SHOW_TIME4(t) std::fixed << std::setprecision(4) << (t)
 #define SHOW_TIME0(t) std::fixed << std::setprecision(0) << (t)
+
+#ifdef NDEBUG
+#define SHOW_TIME(t) SHOW_TIME4(t)
+#else
+#define SHOW_TIME(t) SHOW_TIME1(t)
+#endif
 
 template <class K, class V>
 bool contains(const std::unordered_map<K, V> &es, const K &e) {
