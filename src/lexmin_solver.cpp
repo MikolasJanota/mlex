@@ -15,17 +15,27 @@
 using SATSPC::Lit;
 using SATSPC::mkLit;
 
+#define VERB(level, code)                                                      \
+    if (d_options.verbose >= level)                                            \
+        do {                                                                   \
+            code                                                               \
+    } while (0)
+
 #ifdef NDEBUG
 #define TRACE(code)
 #else
 #define TRACE(code)                                                            \
     do {                                                                       \
         code                                                                   \
+    } while (0);                                                               \
+    do {                                                                       \
+        std::cout.flush();                                                     \
     } while (0)
 #endif
 
 void LexminSolver::solve() {
     const auto n = d_table.order();
+    const auto budgeting = d_options.budgeting;
     d_fixed.resize(n, n);
     d_used.resize(n, false);
 
@@ -39,8 +49,13 @@ void LexminSolver::solve() {
         d_encoding->encode_bij();
     }
 
-    if (d_options.budgeting) {
-        calculate_budgets();
+    std::vector<std::vector<size_t>> cols_budget(n, d_col_budget);
+
+    if (budgeting) {
+        calculate_budgetsRowTot();
+        calculate_budgetsCol();
+        assert(d_col_budget.size() == n);
+        cols_budget.assign(n, d_col_budget);
     }
 
     d_assignments.clear();
@@ -48,75 +63,96 @@ void LexminSolver::solve() {
 
     InvariantCalculator calc(n);
     std::vector<size_t> current_row_budget;
+
     for (size_t row = 0; row < n; row++) {
+        if (budgeting)
+            current_row_budget = d_row_budget;
+
         if (d_options.invariants)
             calc.set_row(row);
 
-        if (d_options.budgeting) {
-            if (row == 1 && d_0preImage) {
-                // mark preimage of first row as used
-                if (!d_used[*d_0preImage]) {
-                    d_used[*d_0preImage] = true;
-                    calculate_budgets();
-                }
-            }
-            assert(d_rowBudget.size() == n);
-            current_row_budget = d_rowBudget;
-        }
+        assert(!budgeting || d_total_budget.size() == n);
+        assert(!budgeting || current_row_budget.size() == n);
 
         for (size_t col = 0; col < n; col++) {
+            assert(!budgeting || cols_budget[col].size() == n);
             d_assignments.push_back({row, col, 0});
-            TRACE(d_output.comment(3) << "(" << row << " " << col << ") :";);
-            auto &current_assignment = d_assignments.back();
-            auto &cur_val = std::get<2>(current_assignment);
-            while (true) {
-                assert(cur_val < n);
-                const bool found =
-                    d_options.budgeting
-                        ? current_row_budget[cur_val] && test_sat()
-                        : test_sat();
-                if (d_options.budgeting && found)
-                    current_row_budget[cur_val]--;
+            auto &cur_val = std::get<2>(d_assignments.back());
 
-                if (found)
-                    break;
-                cur_val++;
+            TRACE(comment(3) << "(" << row << " " << col << ") :";);
+
+            for (bool found = false; !found;) {
+                TRACE(if (budgeting) ccomment(4)
+                          << "(budg r/c/t: " << current_row_budget[cur_val]
+                          << " " << cols_budget[col][cur_val] << " "
+                          << d_total_budget[cur_val] << ") ";);
+
+                const bool skip =
+                    budgeting && (current_row_budget[cur_val] == 0 ||
+                                  d_total_budget[cur_val] == 0 ||
+                                  cols_budget[col][cur_val] == 0);
+
+                found = !skip && test_sat();
+                if (budgeting && found) {
+                    current_row_budget[cur_val]--;
+                    d_total_budget[cur_val]--;
+                    cols_budget[col][cur_val]--;
+                }
+                if (!found)
+                    cur_val++;
             }
+            assert(cur_val < n);
+
             if (d_options.invariants)
                 calc.set_val(col, cur_val);
-            TRACE(d_output.ccomment(3) << std::endl;);
+
+            TRACE(ccomment(3) << std::endl;);
         }
 
-        if (d_options.invariants && row + 1 < n) {
-            auto inv = calc.make_ivec();
-            auto &info = d_invariants.get(inv);
-            info.used++;
-            if (info.used == info.original_rows.size()) {
-                for (auto k : info.original_rows)
-                    d_used[k] = true;
-                if (d_options.verbose > 2) {
-                    d_output.comment(3) << "used {";
-                    for (const auto k : info.original_rows)
-                        d_output.ccomment(3) << " " << k;
-                    d_output.ccomment(3) << " }" << std::endl;
-                }
-
-                for (size_t j = row + 1; j < n; j++)
-                    for (auto k : info.original_rows)
-                        d_sat->addClause(~d_encoding->perm(k, j));
-
-                if (info.used == 1) {
-                    d_fixed[info.original_rows.back()] = row;
-                    d_output.comment(2) << info.original_rows.back()
-                                        << " fixed to " << row << std::endl;
-                }
-
-                if (d_options.budgeting)
-                    calculate_budgets();
-            }
+        bool update_budgets = false;
+        if (d_options.invariants && row + 1 < n)
+            update_budgets = process_invariant(calc.make_ivec(), row);
+        if (row == 1 && d_0preimage) {
+            d_used[*d_0preimage] = true; // mark preimage of first row as used
+            update_budgets = true;
         }
+
+        if (update_budgets)
+            calculate_budgetsRowTot();
     }
+
     make_solution();
+}
+
+bool LexminSolver::process_invariant(const InvariantVector &invv,
+                                     size_t current_row) {
+    auto &info = d_invariants.get(invv);
+    info.used++;
+    const bool used_up = info.used == info.original_rows.size();
+    if (used_up)
+        mark_used_rows(info, current_row);
+    return used_up;
+}
+
+void LexminSolver::mark_used_rows(const Invariants::Info &info,
+                                  size_t current_row) {
+    const auto &rows = info.original_rows;
+    // marked as used for budgeting purposes
+    for (auto k : rows)
+        d_used[k] = true;
+
+    VERB(3, print_set(comment(3) << "used ", rows););
+
+    // disable further rows to be mapped to the used ones
+    for (auto k : rows)
+        for (size_t j = current_row + 1; j < d_table.order(); j++)
+            d_sat->addClause(~d_encoding->perm(k, j));
+
+    // handled the case of unique original row
+    if (info.used == 1) {
+        d_fixed[rows.back()] = current_row;
+        comment(2) << rows.back() << " fixed to " << current_row << std::endl;
+    }
 }
 
 bool LexminSolver::test_sat() {
@@ -124,9 +160,8 @@ bool LexminSolver::test_sat() {
     const auto rv = d_options.incremental ? test_sat_inc() : test_sat_noinc();
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
-    TRACE(d_output.ccomment(3)
-              << " " << std::get<2>(d_assignments.back()) << ":"
-              << SHOW_TIME(read_cpu_time() - start_time););
+    TRACE(ccomment(3) << " " << std::get<2>(d_assignments.back()) << ":"
+                      << SHOW_TIME(read_cpu_time() - start_time););
     return rv;
 }
 
@@ -137,53 +172,59 @@ void LexminSolver::make_encoding() {
 }
 
 void LexminSolver::opt1stRow() {
+    const auto n = d_table.order();
     // look for idempotents
     std::vector<size_t> idems;
-    for (auto i = d_table.order(); i--;)
+    for (auto i = n; i--;)
         if (d_table.get(i, i) == i)
             idems.push_back(i);
 
     if (idems.empty())
         return; // TODO
 
-    // only idempotents can be at 1st row, if any
-    const bool hasIdem = !idems.empty();
-    std::vector<bool> can_be_first(d_table.order(), !hasIdem);
-    for (const auto i : idems)
-        can_be_first[i] = true;
+    VERB(3, print_set(comment(3) << "idems ", idems) << std::endl;);
 
-    // count f(r,y)=r
-    std::vector<size_t> rs(d_table.order(), 0);
-    size_t mxrs = 0;
-    for (auto row = d_table.order(); row--;) {
-        for (auto col = d_table.order(); col--;)
+    // count repetitions f(r,y)=r
+    std::vector<size_t> repeats(n, 0);
+    size_t max_repeats = 0;
+    for (const auto row : idems) {
+        for (auto col = n; col--;)
             if (d_table.get(row, col) == row)
-                rs[row]++;
-        if (rs[row] > mxrs)
-            mxrs = rs[row];
+                repeats[row]++;
+        if (repeats[row] > max_repeats)
+            max_repeats = repeats[row];
     }
-    if (mxrs > 0) {
-        for (auto row = d_table.order(); row--;)
-            if (rs[row] != mxrs)
-                can_be_first[row] = false;
-    }
-    size_t count_can_be_first = 0;
+    comment(3) << "max_repeats " << max_repeats << std::endl;
+
+    assert(max_repeats > 0);
+
+    // identify a rows that can be first
+    std::vector<bool> can_be_first(n, false);
+    for (const auto row : idems)
+        can_be_first[row] = repeats[row] == max_repeats;
+
+    // process rows that can be first
     size_t maxRow = -1;
-    for (auto row = d_table.order(); row--;)
-        if (!can_be_first[row])
-            d_sat->addClause(~d_encoding->perm(row, 0));
-        else {
+    size_t count_can_be_first = 0;
+    for (auto row = n; row--;) {
+        if (can_be_first[row]) {
             count_can_be_first++;
             maxRow = row;
+        } else {
+            d_sat->addClause(~d_encoding->perm(row, 0));
         }
-
-    if (count_can_be_first == 1) {
-        d_statistics.unique1stRow->inc();
-        d_fixed[maxRow] = 0;
-        d_0preImage = maxRow;
     }
 
     assert(count_can_be_first);
+    comment(3) << "count_can_be_first " << count_can_be_first << std::endl;
+
+    // handle the case of unique first row
+    if (count_can_be_first == 1) {
+        d_statistics.unique1stRow->inc();
+        d_fixed[maxRow] = 0;
+        d_0preimage = maxRow;
+        comment(2) << *d_0preimage << " fixed to 0 (opt1stRow)" << std::endl;
+    }
 }
 
 bool LexminSolver::test_sat_inc() {
@@ -205,37 +246,86 @@ bool LexminSolver::test_sat_noinc() {
     return res;
 }
 
-void LexminSolver::calculate_budgets() {
+void LexminSolver::calculate_budgetsCol() {
     const auto n = d_table.order();
-    size_t max_occurrences = 0; // max occurrences for non-fixed elements
-    std::vector<size_t> max_occurrences_fixed(n, 0); // max occs. fixed elems
-    std::vector<size_t> occurrences; // occurrences in current row
+    size_t max_col_occs = 0; // max occurrences for non-fixed elements
+    std::vector<size_t> max_col_occs_fixed(n, 0); // max occs. fixed elems
+    std::vector<size_t> col_occs(n);              // occs. in current col
+    for (auto col = n; col--;) {
+        col_occs.assign(n, 0);
+        for (auto row = n; row--;)
+            col_occs[d_table.get(row, col)]++;
+
+        // update occurrence maxima
+        for (auto val = n; val--;) {
+            auto &mx = is_fixed(val) ? max_col_occs_fixed[val] : max_col_occs;
+            mx = std::max(mx, col_occs[val]);
+        }
+    }
+
+    comment(2) << "max occ./col: " << max_col_occs << std::endl;
+
+    // set up budgets
+    d_col_budget.assign(n, max_col_occs); // default
+    for (auto original_val = n; original_val--;) {
+        if (!is_fixed(original_val))
+            continue;
+        const auto image = d_fixed[original_val];
+        d_col_budget[image] = max_col_occs_fixed[original_val];
+        comment(2) << "max occ./col for " << image << ": "
+                   << d_col_budget[image] << std::endl;
+    }
+}
+
+void LexminSolver::calculate_budgetsRowTot() {
+    const auto n = d_table.order();
+    size_t max_row_occs = 0; // max occurrences for non-fixed elements
+    std::vector<size_t> max_row_occs_fixed(n, 0); // max occs. fixed elems
+    std::vector<size_t> row_occs(n, 0);           // occs. in current row
+    std::vector<size_t> total_occs(n, 0);         // occs. in table per element
     for (auto row = n; row--;) {
         if (d_used[row]) // skip used rows
             continue;
-        // count occurrences for each value
-        occurrences.clear();
-        occurrences.resize(n, 0);
-        for (auto col = n; col--;)
-            occurrences[d_table.get(row, col)]++;
-        // update occurrence maxima
-        for (auto value = n; value--;) {
-            auto &mx = is_fixed(value) ? max_occurrences_fixed[value]
-                                       : max_occurrences;
-            mx = std::max(mx, occurrences[value]);
+
+        // update occurrences for each value in the row
+        row_occs.assign(n, 0);
+        for (auto col = n; col--;) {
+            const auto val = d_table.get(row, col);
+            row_occs[val]++;
+            total_occs[val]++;
+        }
+
+        // update row occurrence maxima
+        for (auto val = n; val--;) {
+            auto &mx = is_fixed(val) ? max_row_occs_fixed[val] : max_row_occs;
+            mx = std::max(mx, row_occs[val]);
         }
     }
-    d_output.comment(2) << "max occ. per row: " << max_occurrences << std::endl;
-    d_rowBudget.clear();
-    d_rowBudget.resize(n, max_occurrences); // defaults to max_occurrences
-    // set up budgets for fixed values' images
-    for (auto original_value = n; original_value--;)
-        if (is_fixed(original_value)) {
-            const auto image = d_fixed[original_value];
-            d_rowBudget[image] = max_occurrences_fixed[original_value];
-            d_output.comment(2) << "max occ. per row for " << image << ": "
-                                << d_rowBudget[image] << std::endl;
-        }
+
+    // maximum number of total occurrences  over non-fixed all elements
+    size_t max_total_occs = 0;
+    for (auto val = n; val--;)
+        if (!is_fixed(val))
+            max_total_occs = std::max(max_total_occs, total_occs[val]);
+
+    VERB(3, print_set(comment(3) << "total_occs ", total_occs) << std::endl;);
+    comment(2) << "max occ./row: " << max_row_occs << std::endl;
+    comment(2) << "max occ./tot: " << max_total_occs << std::endl;
+
+    // set up budgets
+    d_row_budget.assign(n, max_row_occs);     // default
+    d_total_budget.assign(n, max_total_occs); // default
+    for (auto original_val = n; original_val--;) {
+        if (!is_fixed(original_val))
+            continue;
+        const auto image = d_fixed[original_val];
+        d_row_budget[image] = max_row_occs_fixed[original_val];
+        d_total_budget[image] = total_occs[original_val];
+        comment(2) << "max occ./row for " << image << ": "
+                   << d_row_budget[image] << std::endl;
+        comment(2) << "max occ./tot for " << image << ": "
+                   << d_total_budget[image] << std::endl;
+    }
 }
 
 void LexminSolver::make_solution() {

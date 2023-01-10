@@ -92,3 +92,10 @@ inline bool insert(std::vector<bool> &es, int e) {
 template <class M, class K> bool contains(const M &m, const K &e) {
     return m.find(e) != m.end();
 }
+
+template <class C> std::ostream &print_set(std::ostream &out, const C &m) {
+    out << "{";
+    for (const auto &e : m)
+        out << " " << e;
+    return out << " }";
+}

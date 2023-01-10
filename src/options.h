@@ -52,7 +52,7 @@ class Output {
     };
     inline std::ostream &comment(int level = 0) {
         if (d_options.verbose >= level)
-            return std::cout << d_options.comment_prefix << " ";
+            return (std::cout << d_options.comment_prefix << " ").flush();
         else
             return cnul;
     };
