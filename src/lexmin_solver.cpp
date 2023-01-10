@@ -137,10 +137,18 @@ void LexminSolver::solve() {
 
 void LexminSolver::make_last_permutation() {
     const auto n = d_table.order();
-    d_last_permutation.assign(n, -1);
-    d_inv_last_permutation.assign(n, -1);
+    const auto first = d_last_permutation.empty();
+    if (first) {
+        d_last_permutation.assign(n, -1);
+        d_inv_last_permutation.assign(n, -1);
+    }
+    assert(d_last_permutation.size() == n);
+    assert(d_inv_last_permutation.size() == n);
     for (auto dom = n; dom--;) {
-        bool found = false;
+        bool found =
+            !first &&
+            d_sat->eval_lit(d_encoding->perm(dom, d_last_permutation[dom])) ==
+                SATSPC::l_True;
         for (auto rng = n; !found && rng--;)
             if (d_sat->eval_lit(d_encoding->perm(dom, rng)) == SATSPC::l_True) {
                 d_last_permutation[dom] = rng;
