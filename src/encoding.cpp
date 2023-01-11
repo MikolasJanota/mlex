@@ -54,7 +54,7 @@ void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
     const auto n = d_table.order();
     if (selector != lit_Undef)
         selector = ~selector;
-    SATSPC::vec<SATSPC::Lit> ls;
+    auto &ls = _encoding_pos_ls;
     if (row == col) {
         for (size_t e = 0; e < n; e++) {
             const auto old_val = d_table.get(e, e);

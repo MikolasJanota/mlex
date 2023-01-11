@@ -34,6 +34,8 @@ class Encoding {
     SATSPC::MiniSatExt &d_sat;
     const BinaryFunction &d_table;
 
+    SATSPC::vec<SATSPC::Lit> _encoding_pos_ls;
+
     inline void atm1(SATSPC::MiniSatExt &sat,
                      const std::vector<SATSPC::Lit> &literals) {
         LOGIPASIR(std::cout << "atm1 { ";
