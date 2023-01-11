@@ -60,24 +60,26 @@ class Encoding {
     }
 
   public:
-    inline SATSPC::Lit perm(size_t a, size_t b) const { return d_perms[a][b]; }
+    inline SATSPC::Lit perm(size_t dom, size_t rng) {
+        auto &row = d_perms[dom];
+        auto lit = row[rng];
+        if (lit != SATSPC::lit_Undef)
+            return lit;
+#ifdef NDEBUG
+        row[rng] = SATSPC::mkLit(d_sat.fresh());
+#else
+        std::stringstream sts;
+        sts << "p_" << dom << "_" << rng;
+        row[rng] = get_representative(sts.str());
+#endif
+        return row[rng];
+    }
 
     inline void setup_perms() {
         const auto n = d_table.order();
         d_perms.resize(n);
-        for (auto dom = n; dom--;) {
-            auto &row = d_perms[dom];
-            row.resize(n, SATSPC::lit_Error);
-            for (auto rng = n; rng--;) {
-#ifndef NDEBUG
-                std::stringstream sts;
-                sts << "p_" << dom << "_" << rng;
-                row[rng] = get_representative(sts.str());
-#else
-                row[rng] = SATSPC::mkLit(d_sat.fresh());
-#endif
-            }
-        }
+        for (size_t dom = 0; dom < n; dom++)
+            d_perms[dom].resize(n, SATSPC::lit_Undef);
     }
 
 #ifndef NDEBUG
