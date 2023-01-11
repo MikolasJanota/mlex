@@ -49,8 +49,13 @@ int main(int argc, char **argv) {
         ->default_val(0);
     app.add_flag("-r", options.invariants, "use row invariants")
         ->default_val(0);
-    app.add_flag("-l", options.last_solution, "Check last solution to see that this value is already possible.")
+    app.add_flag(
+           "-l", options.last_solution,
+           "Check last solution to see that this value is already possible.")
         ->default_val(false);
+    app.add_flag("--seq-counter-lits", options.seq_counter_lits,
+                 "seq_counter_lits.")
+        ->default_val(10);
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
 

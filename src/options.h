@@ -31,6 +31,7 @@ struct Options {
     bool incremental;
     bool mace_format;
     int unique;
+    size_t seq_counter_lits;
     bool opt1stRow;
     int budgeting;
     bool invariants;

@@ -28,10 +28,20 @@ static void skip(StreamBuffer &sb) {
 
 static void match_string(StreamBuffer &sb, const char *s) {
     skip(sb);
-    const auto rstr = readString(sb);
-    if (rstr != s) {
-        std::cerr << s << " expected instead of '" << rstr << "'" << std::endl;
-        exit(EXIT_FAILURE);
+    const auto olds = s;
+    for (; *s; ++sb, s++) {
+        if (*sb == EOF) {
+            std::cerr << "End of file when looking for '" << olds << "'."
+                      << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        const char rc = *sb;
+        if (rc != *s) {
+            std::cerr << "Unexpected character '" << rc
+                      << "' when looking for '" << *s << "' in " << olds << "'."
+                      << std::endl;
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
