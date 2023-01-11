@@ -41,7 +41,9 @@ class Encoding {
              const BinaryFunction &table)
         : d_output(output), d_options(output.d_options),
           d_statistics(output.d_statistics), d_sat(sat), d_table(table) {
+#ifndef NDEBUG
         LOGIPASIR(d_sat.set_representatives(&d_representatives););
+#endif
         setup_perms();
     }
 
@@ -57,6 +59,29 @@ class Encoding {
     StatisticsManager &d_statistics;
     SATSPC::MiniSatExt &d_sat;
     const BinaryFunction &d_table;
+
+  public:
+    inline SATSPC::Lit perm(size_t a, size_t b) const { return d_perms[a][b]; }
+
+    inline void setup_perms() {
+        const auto n = d_table.order();
+        d_perms.resize(n);
+        for (auto dom = n; dom--;) {
+            auto &row = d_perms[dom];
+            row.resize(n, SATSPC::lit_Error);
+            for (auto rng = n; rng--;) {
+#ifndef NDEBUG
+                std::stringstream sts;
+                sts << "p_" << dom << "_" << rng;
+                row[rng] = get_representative(sts.str());
+#else
+                row[rng] = SATSPC::mkLit(d_sat.fresh());
+#endif
+            }
+        }
+    }
+
+#ifndef NDEBUG
     std::unordered_map<std::string, SATSPC::Lit> d_representatives;
 
     SATSPC::Lit get_representative(const std::string &name) {
@@ -69,23 +94,7 @@ class Encoding {
             {SATSPC::var(representative), name}););
         return representative;
     }
-
-  public:
-    inline SATSPC::Lit perm(size_t a, size_t b) const { return d_perms[a][b]; }
-
-    inline void setup_perms() {
-        const auto n = d_table.order();
-        d_perms.resize(n);
-        for (auto dom = n; dom--;) {
-            auto &row = d_perms[dom];
-            row.resize(n, SATSPC::lit_Error);
-            for (auto rng = n; rng--;) {
-                std::stringstream sts;
-                sts << "p_" << dom << "_" << rng;
-                row[rng] = get_representative(sts.str());
-            }
-        }
-    }
+#endif
 
   private:
     std::vector<std::vector<SATSPC::Lit>> d_perms;
