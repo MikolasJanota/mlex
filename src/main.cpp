@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
            "-l", options.last_solution,
            "Check last solution to see that this value is already possible.")
         ->default_val(false);
-    app.add_flag("--seq-counter-lits", options.seq_counter_lits,
-                 "seq_counter_lits.")
+    app.add_option("--seq-counter-lits", options.seq_counter_lits,
+                   "seq_counter_lits.")
         ->default_val(10);
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
@@ -68,6 +68,8 @@ int main(int argc, char **argv) {
     output.comment(1) << "incrementality: "
                       << (options.incremental ? "true" : "false") << std::endl;
     output.comment(1) << "verbosity: " << options.verbose << std::endl;
+    output.comment(1) << "seq_counter_lits: " << options.seq_counter_lits
+                      << std::endl;
 
     if (in == NULL) {
         printf("ERROR! Could not open file: %s\n",
