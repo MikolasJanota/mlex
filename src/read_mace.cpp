@@ -80,23 +80,27 @@ size_t ReadMace::read(int max) {
 
         match_char(d_in, ',');
         match_char(d_in, '[');
-        std::stringstream buf1;
-        while (*d_in != EOF && *d_in != ']') {
-            buf1 << static_cast<char>(*d_in);
-            ++d_in;
+        {
+            std::stringstream buf1;
+            while (*d_in != EOF && *d_in != ']') {
+                buf1 << static_cast<char>(*d_in);
+                ++d_in;
+            }
+            f->set_additional_info(buf1.str());
         }
-        f->set_additional_info(buf1.str());
         match_char(d_in, ']');
         match_char(d_in, ',');
         match_char(d_in, '[');
         match_string(d_in, "function");
         match_char(d_in, '(');
-        std::stringstream buf2;
-        while (*d_in != EOF && *d_in != '(') {
-            buf2 << *d_in;
-            ++d_in;
+        {
+            std::stringstream buf2;
+            while (*d_in != EOF && *d_in != '(') {
+                buf2 << static_cast<char>(*d_in);
+                ++d_in;
+            }
+            f->set_name(buf2.str());
         }
-        f->set_name(buf2.str());
         match_chars(d_in, "(_,_),[");
         for (size_t i = 0; i < order; i++) {
             for (size_t j = 0; j < order; j++) {
