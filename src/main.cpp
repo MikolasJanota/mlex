@@ -133,6 +133,9 @@ process_tables(Output &output,
         solver.solve();
         if (options.unique) {
             if (mt->add(*(solver.solution()))) {
+                solver.solution()->set_name(table->get_name());
+                solver.solution()->set_additional_info(
+                    table->get_additional_info());
                 unique_solutions.push_back(std::move(solver.solution()));
                 assert(solver.solution().get() == nullptr);
                 output.comment(2)
@@ -142,6 +145,9 @@ process_tables(Output &output,
             }
         } else {
             statistics.producedModels->inc();
+            solver.solution()->set_name(table->get_name());
+            solver.solution()->set_additional_info(
+                table->get_additional_info());
             solver.print_solution(cout);
         }
         counter++;

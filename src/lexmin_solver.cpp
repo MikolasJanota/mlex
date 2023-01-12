@@ -395,8 +395,6 @@ void LexminSolver::calculate_budgetsRowTot() {
 void LexminSolver::make_solution() {
     const auto n = d_table.order();
     d_solution = std::make_unique<BinaryFunction>(n);
-    d_solution->set_name(d_table.get_name());
-    d_solution->set_additional_info(d_table.get_additional_info());
     for (const auto &[row, col, val] : d_assignments)
         d_solution->set(row, col, val);
 }
