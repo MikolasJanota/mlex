@@ -27,9 +27,9 @@ class BinaryFunction {
 
     void print(std::ostream &out) const;
     void set_name(const std::string &s) { _name = s; }
-    std::string get_name() const { return _name; }
+    const std::string &get_name() const { return _name; }
     void set_additional_info(const std::string &s) { _additional_info = s; }
-    std::string get_additional_info() const { return _additional_info; }
+    const std::string &get_additional_info() const { return _additional_info; }
 
     void print_gap(std::ostream &output);
     void print_mace(std::ostream &output);
