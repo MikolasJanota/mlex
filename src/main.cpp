@@ -23,9 +23,7 @@
 using namespace std;
 static void prn_header(Output &);
 static void solve(Output &, const BinaryFunction &);
-static void
-solve_more(Output &options,
-           const std::vector<std::unique_ptr<BinaryFunction>> &tables);
+static void solve_more(Output &options, ReadMace &reader);
 static double start_time;
 
 int main(int argc, char **argv) {
@@ -81,11 +79,9 @@ int main(int argc, char **argv) {
     start_time = read_cpu_time();
     if (options.mace_format) {
         ReadMace reader(output, in);
-        reader.read();
+        solve_more(output, reader);
         if (!use_std)
             gzclose(in);
-        statistics.readingTime->inc(read_cpu_time() - start_time);
-        solve_more(output, reader.functions());
     } else {
         ReadGAP reader(in);
         reader.read();
@@ -108,33 +104,25 @@ int main(int argc, char **argv) {
 }
 
 static void
-solve_more(Output &output,
-           const std::vector<std::unique_ptr<BinaryFunction>> &tables) {
+process_tables(Output &output,
+               const std::vector<std::unique_ptr<BinaryFunction>> &tables,
+               std::unique_ptr<ModelTrie> &mt,
+               std::vector<std::unique_ptr<BinaryFunction>> &unique_solutions,
+               size_t &counter) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
 
-    std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
-    std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
-
-    size_t counter = 0;
-    size_t lastp = 0;
-
-    if (options.verbose == 0)
-        output.comment() << "Done:";
-
     for (const auto &table : tables) {
         statistics.readModels->inc();
-        const size_t p = (100 * counter) / tables.size();
-        if (p != lastp && (p % 10) == 0) {
+        if (counter && (counter % 1000) == 0) {
             if (options.verbose == 0) {
                 (output.ccomment()
-                 << " " << p << "%"
-                 << " (" << SHOW_TIME0(read_cpu_time() - start_time) << "s)")
+                 << " " << counter << " ("
+                 << SHOW_TIME0(read_cpu_time() - start_time) << "s)")
                     .flush();
             } else {
-                output.comment() << "done: " << p << "%" << std::endl;
+                output.comment() << "done: " << counter << std::endl;
             }
-            lastp = p;
         }
 
         output.comment(1) << "solving " << table->get_name()
@@ -158,6 +146,34 @@ solve_more(Output &output,
         }
         counter++;
     }
+}
+
+static int read(Output &output, ReadMace &reader, int max_read) {
+    const auto t0 = read_cpu_time();
+    const auto rv = reader.read(max_read);
+    output.d_statistics.readingTime->inc(read_cpu_time() - t0);
+    return rv;
+}
+
+static void solve_more(Output &output, ReadMace &reader) {
+    auto &options(output.d_options);
+    auto &statistics(output.d_statistics);
+
+    std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
+    std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
+
+    size_t counter = 0;
+
+    if (options.verbose == 0)
+        output.comment() << "Done:";
+
+    const auto max_read = 100;
+    while (read(output, reader, max_read)) {
+        process_tables(output, reader.functions(), mt, unique_solutions,
+                       counter);
+        reader.clear();
+    };
+
     if (options.verbose == 0)
         output.ccomment() << std::endl;
 

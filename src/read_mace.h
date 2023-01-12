@@ -18,13 +18,15 @@
 class ReadMace {
   public:
     ReadMace(Output &output, gzFile &input_file);
-    void                                                read();
+    size_t read(int max);
+    void clear() { d_functions.clear(); }
     const std::vector<std::unique_ptr<BinaryFunction>> &functions() const {
         return d_functions;
     }
 
   private:
-    Output &                                     d_output;
-    gzFile                                       d_input_file;
+    Output &d_output;
+    gzFile &d_input_file;
+    StreamBuffer d_in;
     std::vector<std::unique_ptr<BinaryFunction>> d_functions;
 };
