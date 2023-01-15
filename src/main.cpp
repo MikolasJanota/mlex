@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     output.comment(1) << "seq_counter_lits: " << options.seq_counter_lits
                       << std::endl;
 
-    if (in == NULL) {
+    if (in == nullptr) {
         printf("ERROR! Could not open file: %s\n",
                argc == 1 ? "<stdin>" : argv[1]);
         exit(EXIT_FAILURE);

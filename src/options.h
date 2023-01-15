@@ -28,15 +28,15 @@ class null_out_stream : public std::ostream {
 
 struct Options {
     int verbose = 0;
-    bool incremental;
-    bool mace_format;
-    int unique;
-    size_t seq_counter_lits;
-    bool opt1stRow;
-    int budgeting;
-    bool invariants;
-    bool last_solution;
-    std::string comment_prefix = "#";
+    bool incremental = false;
+    bool mace_format = false;
+    int unique = false;
+    size_t seq_counter_lits = 10;
+    bool opt1stRow = false;
+    int budgeting = 0;
+    bool invariants = false;
+    bool last_solution = false;
+    const char *comment_prefix = "#";
 };
 
 class Output {

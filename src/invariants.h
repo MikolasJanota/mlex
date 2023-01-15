@@ -64,8 +64,7 @@ class Invariants {
     };
 
     Invariants(Output &output, const BinaryFunction &table)
-        : d_output(output), d_options(output.d_options),
-          d_statistics(output.d_statistics), d_table(table) {}
+        : d_output(output), d_options(output.d_options), d_table(table) {}
 
     void calculate();
 
@@ -78,7 +77,6 @@ class Invariants {
   private:
     Output &d_output;
     const Options &d_options;
-    StatisticsManager &d_statistics;
     const BinaryFunction &d_table;
     std::unordered_map<InvariantVector, Info, ImmutableVector_hash<size_t>,
                        ImmutableVector_equal<size_t>>
