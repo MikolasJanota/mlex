@@ -28,6 +28,8 @@ class Encoding {
     void encode_bij();
     void encode(const std::vector<Assignment> &assignments);
     void encode_pos(const Assignment &val, SATSPC::Lit selector);
+    void encode_shot(const std::pair<size_t, size_t> &cell,
+                     const std::vector<size_t> &vals, SATSPC::Lit selector);
 
   private:
     const Options &d_options;
