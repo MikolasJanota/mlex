@@ -52,6 +52,7 @@ void Encoding::encode_shot(const std::pair<size_t, size_t> &cell,
                            const std::vector<size_t> &vals,
                            SATSPC::Lit selector) {
     assert(selector != lit_Undef);
+    selector = ~selector;
     const auto n = d_table.order();
     const auto &[row, col] = cell;
     auto &ls = _encoding_pos_ls;

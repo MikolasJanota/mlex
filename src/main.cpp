@@ -47,6 +47,19 @@ int main(int argc, char **argv) {
         ->default_val(0);
     app.add_flag("-r", options.invariants, "use row invariants")
         ->default_val(0);
+
+    //  adapted from
+    //  https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
+    std::map<std::string, SearchType> map{{"lus", SearchType::lin_us},
+                                          {"lsu", SearchType::lin_su}};
+    // CheckedTransformer translates and checks whether the results are either
+    // in one of the strings or in one of the translations already
+    app.add_option("-t,--search-type", options.search_type,
+                   "set the search type")
+        ->default_val(SearchType::lin_us)
+        ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
+    ///// TODO better help message
+
     app.add_flag(
            "-l", options.last_solution,
            "Check last solution to see that this value is already possible.")
@@ -74,6 +87,14 @@ int main(int argc, char **argv) {
                argc == 1 ? "<stdin>" : argv[1]);
         exit(EXIT_FAILURE);
     }
+
+    if (options.search_type == SearchType::lin_su &&
+        (!options.last_solution || !options.incremental)) {
+        printf("ERROR!  multishot search requires last solution and "
+               "incremental to be set");
+        exit(EXIT_FAILURE);
+    }
+
     prn_header(output);
 
     start_time = read_cpu_time();

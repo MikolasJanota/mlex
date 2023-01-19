@@ -12,12 +12,12 @@
 #include <memory>
 #include <vector>
 
+class Budgets;
+
 class LexminSolver {
   public:
-    LexminSolver(Output &output, const BinaryFunction &table)
-        : d_output(output), d_options(output.d_options),
-          d_statistics(output.d_statistics), d_table(table),
-          d_invariants(output, table) {}
+    LexminSolver(Output &output, const BinaryFunction &table);
+    virtual ~LexminSolver();
     void solve();
 
     void print_solution(std::ostream &output);
@@ -34,9 +34,6 @@ class LexminSolver {
     std::unique_ptr<Encoding> d_encoding;
 
     std::vector<Encoding::Assignment> d_assignments;
-    std::vector<size_t> d_row_budget;
-    std::vector<size_t> d_col_budget;
-    std::vector<size_t> d_total_budget;
 
     std::vector<size_t> d_fixed;
     std::vector<bool> d_used;
@@ -44,6 +41,7 @@ class LexminSolver {
     std::optional<size_t> d_0preimage;
 
     Invariants d_invariants;
+    std::unique_ptr<Budgets> d_budgets;
 
     inline std::ostream &comment(int level = 0) {
         return d_output.comment(level);
@@ -55,18 +53,23 @@ class LexminSolver {
 
     void make_encoding();
     bool test_sat();
+    bool test_sat(const std::pair<size_t, size_t> &cell,
+                  const std::vector<size_t> &vals);
     bool test_sat_noinc();
     bool test_sat_inc();
 
     /*  try to infer additional constraints on the first row */
     void opt1stRow();
     void make_solution();
-    void calculate_budgetsRowTot();
-    void calculate_budgetsCol();
+    void calculate_budgets_row_tot();
+    void calculate_budgets_col();
     void mark_used_rows(const Invariants::Info &rows, size_t current_row);
 
     // returns whether updates should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
+    size_t find_value(std::optional<size_t> last_val);
+    size_t find_value_unsat_sat(std::optional<size_t> last_val);
+    size_t find_value_sat_unsat(std::optional<size_t> last_val);
 
     std::vector<size_t> d_last_permutation;
     std::vector<size_t> d_inv_last_permutation;
