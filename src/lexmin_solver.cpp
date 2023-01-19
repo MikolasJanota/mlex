@@ -124,13 +124,12 @@ size_t LexminSolver::find_value_sat_unsat(std::optional<size_t> last_val) {
 }
 
 size_t LexminSolver::find_value_unsat_sat(std::optional<size_t> last_val) {
-    const auto n = d_table.order();
     auto &[row, col, cur_val] = d_assignments.back();
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
 
     for (;; cur_val++) {
-        assert(cur_val < n);
+        assert(cur_val < d_table.order());
         TRACE(if (d_budgets) d_budgets->print(ccomment(4), col, cur_val)
                   << " ";);
 
@@ -212,7 +211,7 @@ void LexminSolver::solve() {
             update_budgets = true;
         }
 
-        if (update_budgets)
+        if (update_budgets && budgeting)
             calculate_budgets_row_tot();
     }
 
