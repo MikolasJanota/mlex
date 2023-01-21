@@ -12,9 +12,8 @@
 #ifndef __MINGW32__
 #include <sys/resource.h>
 #endif
-#include <assert.h>
+#include <cassert>
 #include <iomanip>
-#include <string.h>
 #define OUT std::cout
 
 #define __PL (std::cerr << __FILE__ << ":" << __LINE__ << std::endl).flush();
@@ -62,38 +61,12 @@ V get(const std::unordered_map<K, V> &es, const K &e) {
     return j->second;
 }
 
-inline bool contains(const std::vector<bool> &es, int e) {
-    assert(e >= 0);
-    const auto ix = (size_t)e;
-    return ix < es.size() ? es[ix] : false;
-}
-
 template <class K>
 inline bool insert_chk(std::unordered_set<K> &es, const K &e) {
     const auto i = es.insert(e);
     const bool a = i.second;
     assert(a);
     return a;
-}
-
-inline bool erase(std::vector<bool> &es, int e) {
-    assert(e >= 0);
-    const auto ix = (size_t)e;
-    if (ix >= es.size())
-        return false;
-    const bool rv = es[ix];
-    es[ix] = false;
-    return rv;
-}
-
-inline bool insert(std::vector<bool> &es, int e) {
-    assert(e >= 0);
-    const auto ix = (size_t)e;
-    if (ix >= es.size())
-        es.resize(ix + 1, false);
-    const bool rv = es[ix];
-    es[ix] = e;
-    return rv;
 }
 
 template <class M, class K> bool contains(const M &m, const K &e) {

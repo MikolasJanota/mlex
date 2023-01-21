@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <math.h>
 #include <memory>
 #include <tuple> // for get
 #include <vector>

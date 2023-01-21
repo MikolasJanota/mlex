@@ -5,7 +5,6 @@
  * Copyright (C) 2020, Mikolas Janota
  */
 #include "binary_function.h"
-#include <climits>
 #include <iostream>
 
 void BinaryFunction::print(std::ostream &out) const {
@@ -52,4 +51,3 @@ void BinaryFunction::print_mace(std::ostream &output) {
     }
     output << "])])." << std::endl;
 }
-

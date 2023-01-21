@@ -8,11 +8,11 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstddef> // for size_t
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
-#include <limits>
-#include <math.h>
+#include <string> // for string
 #include <vector>
 
 class BinaryFunction {

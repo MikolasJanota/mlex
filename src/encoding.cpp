@@ -6,7 +6,9 @@
  */
 #include "encoding.h"
 #include "auxiliary.h"
+#include "binary_function.h" // for BinaryFunction
 #include "minisat/core/SolverTypes.h"
+#include <cassert> // for assert
 #include <vector>
 
 inline bool is_true(SATSPC::Lit l, const SATSPC::vec<SATSPC::lbool> &values) {

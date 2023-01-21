@@ -5,15 +5,17 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include "auxiliary.h"       // for SATSPC
+#include "binary_function.h" // for BinaryFunction
 #include "comp_function.h"
 #include "encoding.h"
 #include "invariants.h"
-#include "minisat_ext.h"
 #include "options.h"
-#include <cstddef>
-#include <iosfwd> // for ostream
+#include <cstddef> // for size_t
+#include <iosfwd>  // for ostream
 #include <memory>
 #include <optional> // for optional
+#include <utility>  // for pair
 #include <vector>
 
 class LexminSolver {
@@ -60,7 +62,7 @@ class LexminSolver {
     bool test_sat_noinc();
     bool test_sat_inc();
 
-    /*  try to infer additional constraints on the first row */
+    /* try to infer additional constraints on the first row */
     void opt1stRow();
     void calculate_budgetsRowTot();
     void calculate_budgetsCol();
