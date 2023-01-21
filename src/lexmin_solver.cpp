@@ -11,7 +11,6 @@
 #include <cassert>
 #include <cstddef>
 #include <iostream>
-#include <math.h>
 #include <memory>
 #include <vector>
 using SATSPC::Lit;

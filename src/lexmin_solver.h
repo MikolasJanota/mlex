@@ -5,11 +5,16 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include "auxiliary.h"       // for SATSPC
+#include "binary_function.h" // for BinaryFunction
 #include "encoding.h"
 #include "invariants.h"
-#include "minisat_ext.h"
 #include "options.h"
+#include <cstddef> // for size_t
+#include <iosfwd>  // for ostream
 #include <memory>
+#include <optional> // for optional
+#include <utility>  // for pair
 #include <vector>
 
 class Budgets;

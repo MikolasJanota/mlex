@@ -6,7 +6,7 @@
  */
 #include "CLI11.hpp"
 #include "auxiliary.h"
-#include "encoding.h"
+#include "binary_function.h" // for BinaryFunction
 #include "lexmin_solver.h"
 #include "options.h"
 #include "read_gap.h"
@@ -14,11 +14,17 @@
 #include "statistics.h"
 #include "trie.h"
 #include "version.h"
-#include <cstddef>
+#include <cassert> // for assert
 #include <cstdlib>
 #include <iostream>
-#include <stdlib.h>
+#include <map>       // for map
+#include <memory>    // for unique_ptr
+#include <stdexcept> // for invalid_argument, out_of_range
 #include <string>
+#include <type_traits> // for remove_reference<>::type
+#include <utility>     // for move
+#include <vector>      // for vector
+#include <zlib.h>      // for gzclose, gzdopen, gzopen, gzFile
 
 using namespace std;
 static void prn_header(Output &);
@@ -83,15 +89,15 @@ int main(int argc, char **argv) {
                       << std::endl;
 
     if (in == nullptr) {
-        printf("ERROR! Could not open file: %s\n",
-               argc == 1 ? "<stdin>" : argv[1]);
+        cerr << "ERROR! Could not open file:"
+             << (argc == 1 ? "<stdin>" : argv[1]) << "\n";
         exit(EXIT_FAILURE);
     }
 
     if (options.search_type == SearchType::lin_su &&
         (!options.last_solution || !options.incremental)) {
-        printf("ERROR!  multishot search requires last solution and "
-               "incremental to be set");
+        cerr << "ERROR!  multishot search requires last solution and "
+                "incremental to be set";
         exit(EXIT_FAILURE);
     }
 
@@ -109,7 +115,7 @@ int main(int argc, char **argv) {
         statistics.readModels->inc();
         statistics.readingTime->inc(read_cpu_time() - start_time);
         if (!reader.has_f()) {
-            puts("function not read");
+            cerr << "function not read" << endl;
             exit(EXIT_FAILURE);
         }
         if (!use_std)

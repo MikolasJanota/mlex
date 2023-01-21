@@ -6,10 +6,20 @@
  */
 #pragma once
 #include "binary_function.h"
+#include "minisat/core/SolverTypes.h" // for Lit, operator~
+#include "minisat/mtl/Vec.h"          // for vec
 #include "minisat_ext.h"
 #include "options.h"
 #include "seq_counter.h"
+#include "auxiliary.h" // for SATSPC
+#include <memory>      // for allocator_traits<>::value_type
 #include <sstream>
+#include <cstddef>      // for size_t
+#include <string>        // for string, basic_string, hash
+#include <tuple>         // for tuple
+#include <unordered_map> // for unordered_map, operator!=, _No...
+#include <utility>       // for pair
+#include <vector>        // for vector
 
 class Encoding {
   public:

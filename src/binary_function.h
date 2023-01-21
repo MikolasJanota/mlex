@@ -7,6 +7,8 @@
 #pragma once
 #include <cassert>
 #include <iostream>
+#include <cstddef> // for size_t
+#include <string>   // for string
 #include <vector>
 class BinaryFunction {
   public:

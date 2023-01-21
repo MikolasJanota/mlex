@@ -7,15 +7,15 @@
 #pragma once
 
 #include "binary_function.h"
-#include <algorithm>
-#include <utility>
 #include <vector>
 
 /** A single node of the IndexTrie. */
 struct ModelTrieNode {
     std::vector<ModelTrieNode *> d_children;
-    ModelTrieNode *              d_blank = nullptr;
+    ModelTrieNode *d_blank = nullptr;
 };
+
+class BinaryFunction;
 
 /** */
 class ModelTrie {
