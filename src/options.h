@@ -36,6 +36,7 @@ struct Options {
     int budgeting = 0;
     bool invariants = false;
     bool last_solution = false;
+    bool use_hash_table = false;
     const char *comment_prefix = "#";
 };
 

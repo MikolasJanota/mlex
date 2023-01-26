@@ -17,14 +17,26 @@
 #include <cstddef>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <stdlib.h>
 #include <string>
+#include <string_view>
 
 using namespace std;
 static void prn_header(Output &);
 static void solve(Output &, const BinaryFunction &);
 static void solve_more(Output &options, ReadMace &reader);
 static double start_time;
+/* #define LM_SET */
+
+#ifndef LM_SET
+#include <unordered_set>
+using HT = std::unordered_set<BinaryFunction *, BinaryFunctionPtr_hash,
+                              BinaryFunctionPtr_equal>;
+#else
+#include <set>
+using HT = std::set<BinaryFunction *, BinaryFunctionPtr_less>;
+#endif
 
 int main(int argc, char **argv) {
     CLI::App app("Lexicography smallest automorphic model.");
@@ -47,6 +59,9 @@ int main(int argc, char **argv) {
         ->default_val(0);
     app.add_flag("-r", options.invariants, "use row invariants")
         ->default_val(0);
+    app.add_flag("-H", options.use_hash_table,
+                 "Use has stable to start unique models instead of trie.")
+        ->default_val(false);
     app.add_flag(
            "-l", options.last_solution,
            "Check last solution to see that this value is already possible.")
@@ -103,14 +118,60 @@ int main(int argc, char **argv) {
     return EXIT_SUCCESS;
 }
 
+static void process_table_plain(Output &output, const BinaryFunction &table,
+                                LexminSolver &solver) {
+    auto &statistics(output.d_statistics);
+    statistics.producedModels->inc();
+    solver.solution()->set_name(table.get_name());
+    solver.solution()->set_additional_info(table.get_additional_info());
+    solver.print_solution(cout);
+}
+
+static void process_table_trie(
+    Output &output, const BinaryFunction &table, LexminSolver &solver,
+    std::unique_ptr<ModelTrie> &mt,
+    std::vector<std::unique_ptr<BinaryFunction>> &unique_solutions) {
+    if (mt->add(*(solver.solution()))) {
+        solver.solution()->set_name(table.get_name());
+        solver.solution()->set_additional_info(table.get_additional_info());
+        unique_solutions.push_back(std::move(solver.solution()));
+        assert(solver.solution().get() == nullptr);
+        output.comment(2) << "added: " << unique_solutions.back()->order()
+                          << " "
+                          << unique_solutions.back()->get_additional_info()
+                          << std::endl;
+    }
+}
+
+static void process_table_ht(Output &output, const BinaryFunction &table,
+                             LexminSolver &solver, std::unique_ptr<HT> &ht) {
+    std::unique_ptr<BinaryFunction> _sol = std::move(solver.solution());
+    BinaryFunction *sol = _sol.release();
+    assert(sol != nullptr);
+    sol->setup_hash();
+    auto [it, successful] = ht->insert(sol);
+    if (!successful) {
+        delete sol;
+        return;
+    }
+    BinaryFunction *nt = *it;
+    assert(nt == sol);
+    nt->set_name(table.get_name());
+    nt->set_additional_info(table.get_additional_info());
+    output.comment(2) << "added: " << nt->order() << " "
+                      << nt->get_additional_info() << std::endl;
+}
+
 static void
 process_tables(Output &output,
                const std::vector<std::unique_ptr<BinaryFunction>> &tables,
-               std::unique_ptr<ModelTrie> &mt,
+               std::unique_ptr<HT> &ht, std::unique_ptr<ModelTrie> &mt,
                std::vector<std::unique_ptr<BinaryFunction>> &unique_solutions,
                size_t &counter) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
+    const auto use_ht = options.unique && options.use_hash_table;
+    const auto use_trie = options.unique && !options.use_hash_table;
 
     for (const auto &table : tables) {
         statistics.readModels->inc();
@@ -131,24 +192,12 @@ process_tables(Output &output,
 
         LexminSolver solver(output, *table);
         solver.solve();
-        if (options.unique) {
-            if (mt->add(*(solver.solution()))) {
-                solver.solution()->set_name(table->get_name());
-                solver.solution()->set_additional_info(
-                    table->get_additional_info());
-                unique_solutions.push_back(std::move(solver.solution()));
-                assert(solver.solution().get() == nullptr);
-                output.comment(2)
-                    << "added: " << unique_solutions.back()->order() << " "
-                    << unique_solutions.back()->get_additional_info()
-                    << std::endl;
-            }
+        if (use_ht) {
+            process_table_ht(output, *table, solver, ht);
+        } else if (use_trie) {
+            process_table_trie(output, *table, solver, mt, unique_solutions);
         } else {
-            statistics.producedModels->inc();
-            solver.solution()->set_name(table->get_name());
-            solver.solution()->set_additional_info(
-                table->get_additional_info());
-            solver.print_solution(cout);
+            process_table_plain(output, *table, solver);
         }
         counter++;
     }
@@ -164,8 +213,10 @@ static int read(Output &output, ReadMace &reader, int max_read) {
 static void solve_more(Output &output, ReadMace &reader) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
-
-    std::unique_ptr<ModelTrie> mt(options.unique ? new ModelTrie() : nullptr);
+    const auto use_ht = options.unique && options.use_hash_table;
+    const auto use_trie = options.unique && !options.use_hash_table;
+    std::unique_ptr<ModelTrie> mt(use_trie ? new ModelTrie() : nullptr);
+    std::unique_ptr<HT> ht(use_ht ? new HT() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
 
     size_t counter = 0;
@@ -175,15 +226,25 @@ static void solve_more(Output &output, ReadMace &reader) {
 
     const auto max_read = 100;
     while (read(output, reader, max_read)) {
-        process_tables(output, reader.functions(), mt, unique_solutions,
+        process_tables(output, reader.functions(), ht, mt, unique_solutions,
                        counter);
         reader.clear();
-    };
+    }
 
     if (options.verbose == 0)
         output.ccomment() << std::endl;
 
-    if (options.unique) {
+    if (use_ht) {
+        for (BinaryFunction *table : *ht) {
+            table->print_mace(cout);
+            statistics.producedModels->inc();
+#ifndef NDEBUG
+            delete table;
+#endif
+        }
+    }
+
+    if (use_trie) {
         for (const auto &table : unique_solutions) {
             table->print_mace(cout);
             statistics.producedModels->inc();
