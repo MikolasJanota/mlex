@@ -31,11 +31,11 @@ static double start_time;
 
 #ifndef LM_SET
 #include <unordered_set>
-using HT = std::unordered_set<BinaryFunction *, BinaryFunctionPtr_hash,
-                              BinaryFunctionPtr_equal>;
+using HT =
+    std::unordered_set<CompFunction, CompFunction_hash, CompFunction_equal>;
 #else
 #include <set>
-using HT = std::set<BinaryFunction *, BinaryFunctionPtr_less>;
+using HT = std::set<CompFunction, CompFunction_less>;
 #endif
 
 int main(int argc, char **argv) {
@@ -121,21 +121,27 @@ int main(int argc, char **argv) {
 static void process_table_plain(Output &output, const BinaryFunction &table,
                                 LexminSolver &solver) {
     auto &statistics(output.d_statistics);
+    const auto &options(output.d_options);
     statistics.producedModels->inc();
-    solver.solution()->set_name(table.get_name());
-    solver.solution()->set_additional_info(table.get_additional_info());
-    solver.print_solution(cout);
+    std::unique_ptr<BinaryFunction> solution(solver.make_solution());
+    solution->set_name(table.get_name());
+    solution->set_additional_info(table.get_additional_info());
+    if (options.mace_format)
+        solution->print_mace(cout);
+    else
+        solution->print_gap(cout);
 }
 
 static void process_table_trie(
     Output &output, const BinaryFunction &table, LexminSolver &solver,
     std::unique_ptr<ModelTrie> &mt,
     std::vector<std::unique_ptr<BinaryFunction>> &unique_solutions) {
-    if (mt->add(*(solver.solution()))) {
-        solver.solution()->set_name(table.get_name());
-        solver.solution()->set_additional_info(table.get_additional_info());
-        unique_solutions.push_back(std::move(solver.solution()));
-        assert(solver.solution().get() == nullptr);
+    std::unique_ptr<BinaryFunction> solution(solver.make_solution());
+    if (mt->add(*solution)) {
+        solution->set_name(table.get_name());
+        solution->set_additional_info(table.get_additional_info());
+        unique_solutions.push_back(std::move(solution));
+        assert(solution.get() == nullptr);
         output.comment(2) << "added: " << unique_solutions.back()->order()
                           << " "
                           << unique_solutions.back()->get_additional_info()
@@ -145,21 +151,19 @@ static void process_table_trie(
 
 static void process_table_ht(Output &output, const BinaryFunction &table,
                              LexminSolver &solver, std::unique_ptr<HT> &ht) {
-    std::unique_ptr<BinaryFunction> _sol = std::move(solver.solution());
-    BinaryFunction *sol = _sol.release();
-    assert(sol != nullptr);
-    sol->setup_hash();
+    auto &statistics(output.d_statistics);
+    CompFunction sol = solver.make_solution_comp();
+    sol.set_name(table.get_name());
+    sol.set_additional_info(table.get_additional_info());
     auto [it, successful] = ht->insert(sol);
     if (!successful) {
-        delete sol;
+        sol.free();
         return;
     }
-    BinaryFunction *nt = *it;
-    assert(nt == sol);
-    nt->set_name(table.get_name());
-    nt->set_additional_info(table.get_additional_info());
-    output.comment(2) << "added: " << nt->order() << " "
-                      << nt->get_additional_info() << std::endl;
+    sol.print_mace(cout);
+    statistics.producedModels->inc();
+    output.comment(2) << "added: " << sol.order() << " "
+                      << sol.get_additional_info() << std::endl;
 }
 
 static void
@@ -235,13 +239,17 @@ static void solve_more(Output &output, ReadMace &reader) {
         output.ccomment() << std::endl;
 
     if (use_ht) {
-        for (BinaryFunction *table : *ht) {
-            table->print_mace(cout);
-            statistics.producedModels->inc();
+        /* for (const CompFunction &table : *ht) { */
+        /*     table.print_mace(cout); */
+        /*     statistics.producedModels->inc(); */
+        /* } */
 #ifndef NDEBUG
-            delete table;
+        std::vector<uint64_t *> cleanup;
+        for (const CompFunction &table : *ht)
+            cleanup.push_back(table.get_data());
+        for (auto d : cleanup)
+            delete[] d;
 #endif
-        }
     }
 
     if (use_trie) {
@@ -254,9 +262,13 @@ static void solve_more(Output &output, ReadMace &reader) {
 
 static void solve(Output &output, const BinaryFunction &table) {
     LexminSolver solver(output, table);
-    solver.solve();
-    solver.print_solution(cout);
     output.d_statistics.producedModels->inc();
+    std::unique_ptr<BinaryFunction> solution(solver.make_solution());
+    const auto &options(output.d_options);
+    if (options.mace_format)
+        solution->print_mace(cout);
+    else
+        solution->print_gap(cout);
 }
 
 void prn_header(Output &output) {

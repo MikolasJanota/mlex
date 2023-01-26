@@ -131,8 +131,6 @@ void LexminSolver::solve() {
         if (update_budgets)
             calculate_budgetsRowTot();
     }
-
-    make_solution();
 }
 
 void LexminSolver::make_last_permutation() {
@@ -392,17 +390,22 @@ void LexminSolver::calculate_budgetsRowTot() {
     }
 }
 
-void LexminSolver::make_solution() {
+BinaryFunction *LexminSolver::make_solution() {
     const auto n = d_table.order();
-    d_solution = std::make_unique<BinaryFunction>(n);
+    auto solution = new BinaryFunction(n);
     for (const auto &[row, col, val] : d_assignments)
-        d_solution->set(row, col, val);
+        solution->set(row, col, val);
+    return solution;
 }
 
-void LexminSolver::print_solution(std::ostream &output) {
-    if (d_options.mace_format)
-        d_solution->print_mace(output);
-    else
-        d_solution->print_gap(output);
+CompFunction LexminSolver::make_solution_comp() {
+    const auto n = d_table.order();
+    CompFunctionBuilder b(n, 2);
+    size_t pos = 0;
+    for (const auto &[row, col, val] : d_assignments) {
+        assert(row == pos / n && col == pos % n);
+        b.push(val);
+        pos++;
+    }
+    return b.make(true);
 }
-

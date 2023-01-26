@@ -20,16 +20,17 @@ class LexminSolver {
           d_invariants(output, table) {}
     void solve();
 
-    void print_solution(std::ostream &output);
+    BinaryFunction *make_solution();
+    CompFunction make_solution_comp();
 
-    std::unique_ptr<BinaryFunction> &solution() { return d_solution; }
+    /* std::unique_ptr<BinaryFunction> &solution() { return d_solution; } */
 
   private:
     Output &d_output;
     const Options &d_options;
     StatisticsManager &d_statistics;
     const BinaryFunction &d_table;
-    std::unique_ptr<BinaryFunction> d_solution;
+    /* std::unique_ptr<BinaryFunction> d_solution; */
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<Encoding> d_encoding;
 
@@ -60,7 +61,6 @@ class LexminSolver {
 
     /*  try to infer additional constraints on the first row */
     void opt1stRow();
-    void make_solution();
     void calculate_budgetsRowTot();
     void calculate_budgetsCol();
     void mark_used_rows(const Invariants::Info &rows, size_t current_row);
