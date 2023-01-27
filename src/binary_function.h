@@ -85,11 +85,11 @@ class CompFunction {
 
     inline uint64_t get_hash() const { return d_hash; }
 
-    void print_mace(std::ostream &output) const;
+    void print_mace(std::ostream &output, const std::string &additional_info) const;
     void set_name(const std::string &s) { _name = s; }
     const std::string &get_name() const { return _name; }
-    void set_additional_info(const std::string &s) { _additional_info = s; }
-    const std::string &get_additional_info() const { return _additional_info; }
+    /* void set_additional_info(const std::string &s) { _additional_info = s; } */
+    /* const std::string &get_additional_info() const { return _additional_info; } */
     uint64_t *get_data() const { return d_data; }
 
   private:
@@ -97,7 +97,7 @@ class CompFunction {
     uint64_t *d_data;
     uint64_t d_hash;
     std::string _name;
-    std::string _additional_info;
+    /* std::string _additional_info; */
 
     void setup_hash() {
         d_hash = 7 * d_order;

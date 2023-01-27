@@ -154,16 +154,14 @@ static void process_table_ht(Output &output, const BinaryFunction &table,
     auto &statistics(output.d_statistics);
     CompFunction sol = solver.make_solution_comp();
     sol.set_name(table.get_name());
-    sol.set_additional_info(table.get_additional_info());
+    /* sol.set_additional_info(table.get_additional_info()); */
     auto [it, successful] = ht->insert(sol);
     if (!successful) {
         sol.free();
         return;
     }
-    sol.print_mace(cout);
+    sol.print_mace(cout, table.get_additional_info());
     statistics.producedModels->inc();
-    output.comment(2) << "added: " << sol.order() << " "
-                      << sol.get_additional_info() << std::endl;
 }
 
 static void
@@ -235,8 +233,8 @@ static void solve_more(Output &output, ReadMace &reader) {
         reader.clear();
     }
 
-    if (options.verbose == 0)
-        output.ccomment() << std::endl;
+    /* if (options.verbose == 0) */
+    /*     output.ccomment() << std::endl; */
 
     if (use_ht) {
         /* for (const CompFunction &table : *ht) { */

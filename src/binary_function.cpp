@@ -34,15 +34,15 @@ void BinaryFunction::print_gap(std::ostream &output) {
     output << "]" << std::endl;
 }
 
-void CompFunction::print_mace(std::ostream &output) const {
+void CompFunction::print_mace(std::ostream &output,
+                              const std::string &info) const {
     if (d_arity != 2) {
         std::cerr << "arity other than 2 not handled yet" << std::endl;
         exit(1);
     }
 
     const auto n = order();
-    output << "interpretation( " << n << ", [" << get_additional_info()
-           << "], [" << std::endl;
+    output << "interpretation( " << n << ", [" << info << "], [" << std::endl;
     output << "  function(" << get_name() << "(_,_), [" << std::endl;
     CompFunctionReader r(*this);
     const auto sz = calculate_cell_count(n, d_arity);
