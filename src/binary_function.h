@@ -25,6 +25,7 @@ inline size_t calculate_bits_needed(size_t order) {
 }
 
 inline size_t calculate_fits(size_t order) {
+    assert(order > 1);
     return std::numeric_limits<uint64_t>::digits / calculate_bits_needed(order);
 }
 
@@ -60,6 +61,13 @@ class CompFunction {
     size_t order() const { return d_order; }
     size_t arity() const { return d_arity; }
     uint64_t get(size_t i) const { return d_data[i]; }
+    inline uint64_t get_hash() const { return d_hash; }
+
+    void print_mace(std::ostream &output,
+                    const std::string &additional_info) const;
+    void set_name(const std::string &s) { _name = s; }
+    const std::string &get_name() const { return _name; }
+    uint64_t *get_data() const { return d_data; }
 
     bool is_equal(const CompFunction &other) const {
         if ((d_order != other.d_order) || (d_arity != other.d_arity))
@@ -83,21 +91,11 @@ class CompFunction {
         return false;
     }
 
-    inline uint64_t get_hash() const { return d_hash; }
-
-    void print_mace(std::ostream &output, const std::string &additional_info) const;
-    void set_name(const std::string &s) { _name = s; }
-    const std::string &get_name() const { return _name; }
-    /* void set_additional_info(const std::string &s) { _additional_info = s; } */
-    /* const std::string &get_additional_info() const { return _additional_info; } */
-    uint64_t *get_data() const { return d_data; }
-
   private:
     const size_t d_order, d_arity, d_data_size;
     uint64_t *d_data;
     uint64_t d_hash;
     std::string _name;
-    /* std::string _additional_info; */
 
     void setup_hash() {
         d_hash = 7 * d_order;
@@ -126,10 +124,10 @@ class CompFunctionReader {
             /* std::cerr<<"v:"<<val<<'\n'; */
             for (auto i = d_fits; i--;) {
                 d_buf.push_back(val & d_mask);
-            /* std::cerr<<" p:"<<d_buf.back()<<" "; */
+                /* std::cerr<<" p:"<<d_buf.back()<<" "; */
                 val >>= d_bits;
             }
-            std::reverse(d_buf.begin(),d_buf.end());
+            std::reverse(d_buf.begin(), d_buf.end());
         }
         const auto rv = d_buf.back();
         d_buf.pop_back();
@@ -152,7 +150,7 @@ class CompFunctionBuilder {
           d_data_size(calculate_data_size(order, arity)) {
         d_bits = calculate_bits_needed(order);
         d_fits = calculate_fits(order);
-        reset(false);
+        reset();
     }
 
     ~CompFunctionBuilder() {
@@ -160,20 +158,19 @@ class CompFunctionBuilder {
             delete[] d_data;
     }
 
-    CompFunction make(bool givup_mem) {
+    CompFunction make() {
         if (!d_buf.empty())
             flush();
         const auto rv = CompFunction(d_order, d_arity, d_data_size, d_data);
-        if (givup_mem)
-            d_data = nullptr;
+        d_data = nullptr;
         return rv;
     }
 
-    void reset(bool keep_memory) {
+    void reset() {
         assert(d_buf.empty());
         d_pos = 0;
         d_buf.clear();
-        if (!keep_memory || d_data == nullptr)
+        if (d_data == nullptr)
             d_data = new uint64_t[d_data_size];
     }
 
@@ -199,10 +196,8 @@ class CompFunctionBuilder {
         while (!d_buf.empty()) {
             w <<= d_bits;
             w |= d_buf.back();
-        /* std::cerr<<"w:"<<w<<"/"<<d_buf.back()<<'\n'; */
             d_buf.pop_back();
         }
-        /* std::cerr<<"w:"<<w<<'\n'; */
     }
 };
 

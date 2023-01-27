@@ -401,11 +401,11 @@ BinaryFunction *LexminSolver::make_solution() {
 CompFunction LexminSolver::make_solution_comp() {
     const auto n = d_table.order();
     CompFunctionBuilder b(n, 2);
-    size_t pos = 0;
+    [[maybe_unused]] size_t pos = 0;
     for (const auto &[row, col, val] : d_assignments) {
         assert(row == pos / n && col == pos % n);
         b.push(val);
         pos++;
     }
-    return b.make(true);
+    return b.make();
 }
