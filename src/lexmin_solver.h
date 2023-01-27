@@ -5,11 +5,15 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include "comp_function.h"
 #include "encoding.h"
 #include "invariants.h"
 #include "minisat_ext.h"
 #include "options.h"
+#include <cstddef>
+#include <iosfwd> // for ostream
 #include <memory>
+#include <optional> // for optional
 #include <vector>
 
 class LexminSolver {
@@ -23,14 +27,11 @@ class LexminSolver {
     BinaryFunction *make_solution();
     CompFunction make_solution_comp();
 
-    /* std::unique_ptr<BinaryFunction> &solution() { return d_solution; } */
-
   private:
     Output &d_output;
     const Options &d_options;
     StatisticsManager &d_statistics;
     const BinaryFunction &d_table;
-    /* std::unique_ptr<BinaryFunction> d_solution; */
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<Encoding> d_encoding;
 

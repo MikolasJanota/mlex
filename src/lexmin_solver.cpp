@@ -6,11 +6,16 @@
  */
 #include "lexmin_solver.h"
 #include "auxiliary.h"
+#include "encoding.h"
+#include "invariants.h"
 #include "minisat/core/SolverTypes.h"
 #include "minisat_ext.h"
+#include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <math.h>
 #include <memory>
+#include <tuple> // for get
 #include <vector>
 using SATSPC::Lit;
 using SATSPC::mkLit;
