@@ -118,6 +118,7 @@ class CompFunctionReader {
 
     size_t next() {
         if (d_buf.empty()) {
+			d_buf.resize(d_fits);
             size_t val = d_f.get(d_pos++);
             for (auto i = d_fits; i--;) {
                 d_buf[i] = val & d_mask;
