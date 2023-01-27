@@ -179,16 +179,16 @@ process_tables(Output &output,
 
     for (const auto &table : tables) {
         statistics.readModels->inc();
-        if (counter && (counter % 1000) == 0) {
-            if (options.verbose == 0) {
-                (output.ccomment()
-                 << " " << counter << " ("
-                 << SHOW_TIME0(read_cpu_time() - start_time) << "s)")
-                    .flush();
-            } else {
-                output.comment() << "done: " << counter << std::endl;
-            }
-        }
+        /* if (counter && (counter % 1000) == 0) { */
+        /*     if (options.verbose == 0) { */
+        /*         (output.ccomment() */
+        /*          << " " << counter << " (" */
+        /*          << SHOW_TIME0(read_cpu_time() - start_time) << "s)") */
+        /*             .flush(); */
+        /*     } else { */
+        /*         output.comment() << "done: " << counter << std::endl; */
+        /*     } */
+        /* } */
 
         output.comment(1) << "solving " << table->get_name()
                           << " order:" << table->order() << " "
@@ -225,8 +225,8 @@ static void solve_more(Output &output, ReadMace &reader) {
 
     size_t counter = 0;
 
-    if (options.verbose == 0)
-        output.comment() << "Done:";
+    /* if (options.verbose == 0) */
+    /*     output.comment() << "Done:"; */
 
     const auto max_read = 100;
     while (read(output, reader, max_read)) {
