@@ -30,13 +30,14 @@ struct Options {
     int verbose = 0;
     bool incremental = false;
     bool mace_format = false;
-    int unique = false;
-    size_t seq_counter_lits = 10;
+    bool unique = false;
     bool opt1stRow = false;
-    int budgeting = 0;
+    bool budgeting = false;
     bool invariants = false;
     bool last_solution = false;
     bool use_hash_table = false;
+    size_t seq_counter_lits = 10;
+
     const char *comment_prefix = "#";
 };
 

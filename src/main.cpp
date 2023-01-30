@@ -46,28 +46,30 @@ int main(int argc, char **argv) {
 
     std::string file_name;
     app.add_option("file_name", file_name, "file name")->default_val("-");
-    app.add_flag("-i", options.incremental, "Use incremental SAT solving.")
+    app.add_flag("-i", options.incremental, "use incremental SAT solving.")
         ->default_val(true);
-    app.add_flag("-1", options.opt1stRow,
-                 "Try to optimize for the first row of the table.")
+    app.add_flag("-1, !--no-1", options.opt1stRow,
+                 "Try to optimize for the first row of the table")
+        ->default_val(true);
+    app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
+        ->default_val(true);
+    app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
+    app.add_flag("-u", options.unique, "Output only unique models")
         ->default_val(false);
-    app.add_flag("-b", options.budgeting, "budgeting.")->default_val(false);
-    app.add_flag("-v", options.verbose, "add verbosity")->default_val(0);
-    app.add_flag("-u", options.unique, "output only unique models")
-        ->default_val(0);
-    app.add_flag("-m", options.mace_format, "use mace format for input/output")
-        ->default_val(0);
-    app.add_flag("-r", options.invariants, "use row invariants")
-        ->default_val(0);
-    app.add_flag("-H", options.use_hash_table,
-                 "Use has stable to start unique models instead of trie.")
+    app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
+    app.add_flag("-r", options.invariants, "Use row invariants")
+        ->default_val(true);
+    app.add_flag("-H,!--no-H", options.use_hash_table,
+                 "Use hashtable to store unique models instead of trie")
+        ->default_val(true);
     app.add_flag(
-           "-l", options.last_solution,
-           "Check last solution to see that this value is already possible.")
-        ->default_val(false);
-    app.add_option("--seq-counter-lits", options.seq_counter_lits,
-                   "seq_counter_lits.")
+           "-l,!--no-l", options.last_solution,
+           "Check last solution to see that this value is already possible")
+        ->default_val(true);
+    app.add_option(
+           "--seq-counter-lits", options.seq_counter_lits,
+           "Number of literals when to switch to seq counter enc for at most 1")
         ->default_val(10);
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
