@@ -10,6 +10,7 @@
 #include "minisat/core/SolverTypes.h"
 #include <cassert> // for assert
 #include <vector>
+using SATSPC::lit_Undef;
 
 inline bool is_true(SATSPC::Lit l, const SATSPC::vec<SATSPC::lbool> &values) {
     const auto v = SATSPC::var(l);
@@ -49,24 +50,26 @@ void Encoding::encode(const std::vector<Assignment> &assignments) {
         encode_pos(assignment, SATSPC::lit_Undef);
 }
 
-using SATSPC::lit_Undef;
-
 void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
     const auto &[row, col, val] = assignment;
     const auto n = d_table.order();
-    if (selector != lit_Undef)
+    const auto sel = selector != lit_Undef;
+    if (sel)
         selector = ~selector;
     auto &ls = _encoding_pos_ls;
     if (row == col) {
         for (size_t e = 0; e < n; e++) {
             const auto old_val = d_table.get(e, e);
+            if (old_val == e && row == val)
+                continue; // tautology
             ls.clear();
             ls.push(~perm(e, row));
-            ls.push(perm(old_val, val));
+            const auto contradiciton = old_val == e && val != row;
+            if (!contradiciton)
+                ls.push(perm(old_val, val));
             if (selector != lit_Undef)
                 ls.push(selector);
             d_sat.addClause_(ls);
-            /* d_sat.addClause(~perm(e, row), perm(old_val, val)); */
         }
     } else {
         for (size_t dom_row = 0; dom_row < n; dom_row++)
@@ -74,15 +77,22 @@ void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
                 if (dom_col == dom_row)
                     continue;
                 const auto old_val = d_table.get(dom_row, dom_col);
+                if ((old_val == dom_row && val == row) ||
+                    (old_val == dom_col && val == col))
+                    continue; // tautology
+                const auto contradiciton = (old_val == dom_row && val != row) ||
+                                           (old_val == dom_col && val != col);
                 ls.clear();
-                ls.push(~perm(dom_row, row));
-                ls.push(~perm(dom_col, col));
-                ls.push(perm(old_val, val));
+                int sz = 2 + (sel ? 1 : 0) + (contradiciton ? 0 : 1);
+                ls.growTo(sz);
                 if (selector != lit_Undef)
-                    ls.push(selector);
+                    ls[--sz] = selector;
+                if (!contradiciton)
+                    ls[--sz] = perm(old_val, val);
+                ls[--sz] = ~perm(dom_col, col);
+                ls[--sz] = ~perm(dom_row, row);
+                assert(sz == 0);
                 d_sat.addClause_(ls);
-                /* d_sat.addClause(~perm(dom_row, row), ~perm(dom_col, col), */
-                /*                 perm(old_val, val)); */
             }
     }
 }
