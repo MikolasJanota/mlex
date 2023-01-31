@@ -267,6 +267,7 @@ static void solve_more(Output &output, ReadMace &reader) {
 
 static void solve(Output &output, const BinaryFunction &table) {
     LexminSolver solver(output, table);
+    solver.solve();
     output.d_statistics.producedModels->inc();
     std::unique_ptr<BinaryFunction> solution(solver.make_solution());
     const auto &options(output.d_options);

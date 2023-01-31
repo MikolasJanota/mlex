@@ -34,6 +34,9 @@ class LexminSolver {
     const Options &d_options;
     StatisticsManager &d_statistics;
     const BinaryFunction &d_table;
+
+    bool d_is_solved = false;
+
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<Encoding> d_encoding;
 

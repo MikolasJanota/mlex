@@ -135,6 +135,7 @@ void LexminSolver::solve() {
         if (update_budgets)
             calculate_budgetsRowTot();
     }
+    d_is_solved = true;
 }
 
 void LexminSolver::make_last_permutation() {
@@ -395,6 +396,7 @@ void LexminSolver::calculate_budgetsRowTot() {
 }
 
 BinaryFunction *LexminSolver::make_solution() {
+    assert(d_is_solved);
     const auto n = d_table.order();
     auto solution = new BinaryFunction(n);
     for (const auto &[row, col, val] : d_assignments)
