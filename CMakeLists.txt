@@ -8,9 +8,10 @@ if(NOT CMAKE_BUILD_TYPE)
         "Default build type: Release" FORCE)
 endif()
 
+option(USE_CADICAL "Use cadical as the base solver" OFF)
+
 # Add sanitizer flags for C++ compiler for "Debug" configuration
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined,bool")
-
 
 ## https://stackoverflow.com/questions/1435953/how-can-i-pass-git-sha1-to-compiler-as-definition-using-cmake
 # the commit's SHA1, and whether the building workspace was dirty or not
@@ -37,7 +38,6 @@ execute_process(COMMAND
 # generate version.cpp
 configure_file("src/version.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" @ONLY)
 
-
 #######
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
@@ -51,28 +51,33 @@ include_directories(contrib/cadical)
 include_directories(contrib/minisat/include)
 include_directories(src)
 
-
 file(GLOB CPPSOURCES "src/*.cpp")
 file(GLOB CSOURCES "src/*.c")
 list(APPEND CPPSOURCES "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
  
 add_executable(${CMAKE_PROJECT_NAME} ${CPPSOURCES} ${CSOURCES} ${GENERATED_SOURCES})
 
-add_library(cadical STATIC IMPORTED GLOBAL)
-add_library(minisat STATIC IMPORTED GLOBAL)
-
-# target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_IPASIR=1)
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_MINISAT=1)
-
-set_target_properties(minisat PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a)
-    # IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/minisat/build/debug/lib/libminisat.a)
-
-set_target_properties(cadical PROPERTIES
+if (USE_CADICAL)
+  message(STATUS "Using cadical")
+  add_library(cadical STATIC IMPORTED GLOBAL)
+  target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_IPASIR=1)
+  target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC cadical)
+  set_target_properties(cadical PROPERTIES
     IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/cadical/libcadical.a)
+else()
+  message(STATUS "Using minisat")
+  target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_MINISAT=1)
 
-# target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC cadical)
-target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC minisat)
+  add_library(minisat STATIC IMPORTED GLOBAL)
+  set_target_properties(minisat PROPERTIES
+    IMPORTED_LOCATION_RELEASE
+    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a
+    IMPORTED_LOCATION_DEBUG
+    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/minisat/build/debug/lib/libminisat.a
+  )
+
+  target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC minisat)
+endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC ZLIB::ZLIB)
 

@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
         ->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
-    app.add_flag("-r", options.invariants, "Use row invariants")
+    app.add_flag("-r,!--no-r", options.invariants, "Use row invariants")
         ->default_val(true);
     app.add_flag("-H,!--no-H", options.use_hash_table,
                  "Use hashtable to store unique models instead of trie")
