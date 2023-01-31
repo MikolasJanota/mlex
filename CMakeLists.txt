@@ -71,9 +71,9 @@ else()
   add_library(minisat STATIC IMPORTED GLOBAL)
   set_target_properties(minisat PROPERTIES
     IMPORTED_LOCATION_RELEASE
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a
+    ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/lib/libminisat.a
     IMPORTED_LOCATION_DEBUG
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/minisat/build/debug/lib/libminisat.a
+    ${CMAKE_CURRENT_SOURCE_DIR}/contrib/minisat/minisat/build/debug/lib/libminisat.a
   )
 
   target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC minisat)
