@@ -85,16 +85,55 @@ LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
       d_invariants(output, table) {}
 LexminSolver::~LexminSolver() {}
 
-size_t LexminSolver::find_value(std::optional<size_t> last_val) {
+size_t LexminSolver::find_value(const std::optional<size_t> &last_val) {
     switch (d_options.search_type) {
     case SearchType::lin_us: return find_value_unsat_sat(last_val);
     case SearchType::lin_su: return find_value_sat_unsat(last_val);
+    case SearchType::bin: return find_value_bin(last_val);
     }
     assert(false);
     return -1;
 }
 
-size_t LexminSolver::find_value_sat_unsat(std::optional<size_t> last_val) {
+size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
+    const auto n = d_table.order();
+    auto &[row, col, cur_val] = d_assignments.back();
+    const auto cell = std::make_pair<>(row, col);
+
+    TRACE(comment(3) << "(" << row << " " << col << ") :";);
+    const size_t ub = last_val ? (*last_val + 1) : n; // upper bound
+    TRACE(comment(3) << "(iub:" << ub << ") ";);
+    std::vector<size_t> a, b;
+    std::vector<size_t> *vals = &a, *top = &b;
+
+    for (size_t v = 0; v < ub; v++) {
+        if (!d_budgets || d_budgets->has_budget(col, v))
+            vals->push_back(v);
+    }
+
+    while (vals->size() > 1) {
+        VERB(4, print_set(comment(4) << "vals ", *vals););
+
+        assert(top->empty());
+        const auto split = vals->size() / 2;
+        for (size_t h = split; h < vals->size(); h++)
+            top->push_back(vals->at(h));
+        vals->resize(split);
+
+        if (!test_sat(cell, *vals))
+            std::swap(vals, top);
+        top->clear();
+    }
+
+    assert(vals->size() == 1);
+    cur_val = vals->back();
+    VERB(4, comment(4) << "val: " << cur_val;);
+    d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
+    return cur_val;
+}
+
+size_t
+LexminSolver::find_value_sat_unsat(const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
     auto &[row, col, cur_val] = d_assignments.back();
     const auto cell = std::make_pair<>(row, col);
@@ -118,11 +157,13 @@ size_t LexminSolver::find_value_sat_unsat(std::optional<size_t> last_val) {
         /* print_set(std::cerr << "af:", vals) << std::endl; */
     }
     cur_val = ub;
+    VERB(4, comment(4) << "val: " << cur_val;);
     d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
     return ub;
 }
 
-size_t LexminSolver::find_value_unsat_sat(std::optional<size_t> last_val) {
+size_t
+LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
     auto &[row, col, cur_val] = d_assignments.back();
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);

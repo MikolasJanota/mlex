@@ -72,9 +72,10 @@ class LexminSolver {
 
     // returns whether updates should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
-    size_t find_value(std::optional<size_t> last_val);
-    size_t find_value_unsat_sat(std::optional<size_t> last_val);
-    size_t find_value_sat_unsat(std::optional<size_t> last_val);
+    size_t find_value(const std::optional<size_t> &last_val);
+    size_t find_value_unsat_sat(const std::optional<size_t> &last_val);
+    size_t find_value_sat_unsat(const std::optional<size_t> &last_val);
+    size_t find_value_bin(const std::optional<size_t> &last_val);
 
     std::vector<size_t> d_last_permutation;
     std::vector<size_t> d_inv_last_permutation;

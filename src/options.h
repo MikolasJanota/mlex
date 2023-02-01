@@ -26,7 +26,7 @@ class null_out_stream : public std::ostream {
     null_out_buf buf;
 };
 
-enum SearchType { lin_us, lin_su };
+enum SearchType { lin_us, lin_su, bin };
 
 struct Options {
     int verbose = 0;
