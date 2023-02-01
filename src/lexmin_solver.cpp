@@ -228,7 +228,9 @@ void LexminSolver::solve() {
 
     InvariantCalculator calc(n);
 
+    const auto start_time = read_cpu_time();
     for (size_t row = 0; row < n; row++) {
+		comment(3) << "row:" << row  << " " << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
         if (budgeting)
             d_budgets->reset_cur_row_budget();
 
