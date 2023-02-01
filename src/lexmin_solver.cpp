@@ -101,7 +101,7 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
-    size_t ub = last_val ? (*last_val + 1) : n; // upper bound
+    size_t ub = last_val ? *last_val : n; // upper bound
     TRACE(comment(3) << "(iub:" << ub << ") ";);
     std::vector<size_t> a, b;
     std::vector<size_t> *vals = &a, *top = &b;
@@ -111,11 +111,11 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
             vals->push_back(v);
     }
 
-    while (vals->size() > 1) {
+    while (!vals->empty()) {
+        assert(top->empty());
         VERB(4, print_set(comment(4) << "vals ", *vals););
 
-        assert(top->empty());
-        const auto split = vals->size() / 2;
+        const auto split = vals->size() / 2 + vals->size() % 2;
         for (size_t h = split; h < vals->size(); h++)
             top->push_back(vals->at(h));
         vals->resize(split);
@@ -124,7 +124,7 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
             assert(!d_last_permutation.empty());
             ub = std::min(ub, get_val(row, col));
             TRACE(comment(3) << "(ub:" << ub << ") ";);
-            while (!vals->empty() && vals->back() > ub)
+            while (!vals->empty() && vals->back() >= ub)
                 vals->pop_back();
         } else {
             std::swap(vals, top);
@@ -132,8 +132,7 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
         top->clear();
     }
 
-    assert(vals->size() == 1);
-    cur_val = vals->back();
+    cur_val = ub;
     VERB(4, comment(4) << "val: " << cur_val;);
     d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
     return cur_val;
@@ -191,7 +190,6 @@ LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
             found = !skip && test_sat();
         }
 
-
         if (found)
             return cur_val;
     }
@@ -228,7 +226,8 @@ void LexminSolver::solve() {
 
     const auto start_time = read_cpu_time();
     for (size_t row = 0; row < n; row++) {
-		comment(3) << "row:" << row  << " " << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
+        comment(3) << "row:" << row << " "
+                   << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
         if (budgeting)
             d_budgets->reset_cur_row_budget();
 
@@ -243,7 +242,7 @@ void LexminSolver::solve() {
                                : std::make_optional(get_val(row, col)));
 
             if (d_budgets)
-              d_budgets->dec_budget(col, cur_val);
+                d_budgets->dec_budget(col, cur_val);
 
             if (d_options.invariants)
                 calc.set_val(col, cur_val);
