@@ -177,7 +177,7 @@ LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
 
     for (;; cur_val++) {
         assert(cur_val < d_table.order());
-        TRACE(if (d_budgets) d_budgets->print(ccomment(4), col, cur_val)
+        TRACE(if (d_budgets) d_budgets->print(ccomment(5), col, cur_val)
                   << " ";);
 
         const bool skip = d_budgets && !d_budgets->has_budget(col, cur_val);
@@ -191,8 +191,6 @@ LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
             found = !skip && test_sat();
         }
 
-        if (d_budgets && found)
-            d_budgets->dec_budget(col, cur_val);
 
         if (found)
             return cur_val;
@@ -241,6 +239,9 @@ void LexminSolver::solve() {
                 find_value(d_last_permutation.empty()
                                ? std::nullopt
                                : std::make_optional(get_val(row, col)));
+
+            if (d_budgets)
+              d_budgets->dec_budget(col, cur_val);
 
             if (d_options.invariants)
                 calc.set_val(col, cur_val);
