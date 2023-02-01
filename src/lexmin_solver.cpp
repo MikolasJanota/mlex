@@ -101,7 +101,7 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
-    const size_t ub = last_val ? (*last_val + 1) : n; // upper bound
+    size_t ub = last_val ? (*last_val + 1) : n; // upper bound
     TRACE(comment(3) << "(iub:" << ub << ") ";);
     std::vector<size_t> a, b;
     std::vector<size_t> *vals = &a, *top = &b;
@@ -120,8 +120,15 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
             top->push_back(vals->at(h));
         vals->resize(split);
 
-        if (!test_sat(cell, *vals))
+        if (test_sat(cell, *vals)) {
+            assert(!d_last_permutation.empty());
+            ub = std::min(ub, get_val(row, col));
+            TRACE(comment(3) << "(ub:" << ub << ") ";);
+            while (!vals->empty() && vals->back() > ub)
+                vals->pop_back();
+        } else {
             std::swap(vals, top);
+        }
         top->clear();
     }
 
