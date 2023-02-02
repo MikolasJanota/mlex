@@ -58,7 +58,8 @@ int main(int argc, char **argv) {
     //  https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
     std::map<std::string, SearchType> map{{"lus", SearchType::lin_us},
                                           {"lsu", SearchType::lin_su},
-                                          {"bin", SearchType::bin}};
+                                          {"bin", SearchType::bin},
+                                          {"bin2", SearchType::bin2}};
     // CheckedTransformer translates and checks whether the results are either
     // in one of the strings or in one of the translations already
     app.add_option("-t,--search-type", options.search_type,
