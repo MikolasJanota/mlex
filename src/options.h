@@ -26,6 +26,8 @@ class null_out_stream : public std::ostream {
     null_out_buf buf;
 };
 
+enum SearchType { lin_us, lin_su, bin, bin2 };
+
 struct Options {
     int verbose = 0;
     bool incremental = false;
@@ -37,7 +39,7 @@ struct Options {
     bool last_solution = false;
     bool use_hash_table = false;
     size_t seq_counter_lits = 10;
-
+    SearchType search_type = SearchType::lin_us;
     const char *comment_prefix = "#";
 };
 

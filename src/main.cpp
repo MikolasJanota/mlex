@@ -7,6 +7,7 @@
 #include "CLI11.hpp"
 #include "auxiliary.h"
 #include "binary_function.h" // for BinaryFunction
+#include "comp_function.h"   // for CompFunction, CompFunction_hash, CompFu...
 #include "lexmin_solver.h"
 #include "options.h"
 #include "read_gap.h"
@@ -15,13 +16,13 @@
 #include "trie.h"
 #include "version.h"
 #include <cassert> // for assert
+#include <cstdint> // for uint64_t
 #include <cstdlib>
 #include <iostream>
 #include <map>       // for map
 #include <memory>    // for unique_ptr
 #include <stdexcept> // for invalid_argument, out_of_range
 #include <string>
-#include <string_view>
 #include <type_traits> // for remove_reference<>::type
 #include <utility>     // for move
 #include <vector>      // for vector
@@ -63,6 +64,24 @@ int main(int argc, char **argv) {
         ->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
+    app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
+    app.add_flag("-u", options.unique, "Output only unique models")
+        ->default_val(false);
+
+    //  adapted from
+    //  https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
+    std::map<std::string, SearchType> map{{"lus", SearchType::lin_us},
+                                          {"lsu", SearchType::lin_su},
+                                          {"bin", SearchType::bin},
+                                          {"bin2", SearchType::bin2}};
+    // CheckedTransformer translates and checks whether the results are either
+    // in one of the strings or in one of the translations already
+    app.add_option("-t,--search-type", options.search_type,
+                   "set the search type")
+        ->default_val(SearchType::lin_us)
+        ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
+    ///// TODO better help message
+
     app.add_flag("-r,!--no-r", options.invariants, "Use row invariants")
         ->default_val(true);
     app.add_flag("-H,!--no-H", options.use_hash_table,
@@ -76,6 +95,7 @@ int main(int argc, char **argv) {
            "--seq-counter-lits", options.seq_counter_lits,
            "Number of literals when to switch to seq counter enc for at most 1")
         ->default_val(10);
+
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
 
@@ -93,9 +113,19 @@ int main(int argc, char **argv) {
 
     if (in == nullptr) {
         cerr << "ERROR! Could not open file:"
-             << (argc == 1 ? "<stdin>" : argv[1]) << "\n";
+             << (argc == 1 ? "<stdin>" : argv[1]) << endl;
         exit(EXIT_FAILURE);
     }
+
+    if (options.search_type == SearchType::lin_su &&
+        (!options.last_solution || !options.incremental)) {
+        cerr << "ERROR!  multishot search requires last solution and "
+                "incremental to be set"
+             << endl;
+        ;
+        exit(EXIT_FAILURE);
+    }
+
     prn_header(output);
 
     start_time = read_cpu_time();

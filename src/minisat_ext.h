@@ -4,8 +4,7 @@
  *
  * Created on November 29, 2010, 5:40 PM
  */
-#ifndef MINISATEXT_HH
-#define	MINISATEXT_HH
+#pragma once
 #define LOGIPASIR(code)                                                        \
     do {                                                                       \
         /* code */                                                             \
@@ -16,6 +15,3 @@
 #else
 #include "minisat_ext_minisat.h"
 #endif
-
-#endif	/* MINISATEXT_HH */
-

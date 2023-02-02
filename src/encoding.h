@@ -5,16 +5,17 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include "auxiliary.h" // for SATSPC
 #include "binary_function.h"
 #include "minisat/core/SolverTypes.h" // for Lit, operator~
 #include "minisat/mtl/Vec.h"          // for vec
 #include "minisat_ext.h"
 #include "options.h"
 #include "seq_counter.h"
-#include "auxiliary.h" // for SATSPC
-#include <memory>      // for allocator_traits<>::value_type
+#include <algorithm> // for max
+#include <cstddef>   // for size_t
+#include <memory>    // for allocator_traits<>::value_type
 #include <sstream>
-#include <cstddef>      // for size_t
 #include <string>        // for string, basic_string, hash
 #include <tuple>         // for tuple
 #include <unordered_map> // for unordered_map, operator!=, _No...
@@ -38,6 +39,8 @@ class Encoding {
     void encode_bij();
     void encode(const std::vector<Assignment> &assignments);
     void encode_pos(const Assignment &val, SATSPC::Lit selector);
+    void encode_shot(const std::pair<size_t, size_t> &cell,
+                     const std::vector<size_t> &vals, SATSPC::Lit selector);
 
   private:
     const Options &d_options;

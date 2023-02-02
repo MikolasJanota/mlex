@@ -50,6 +50,63 @@ void Encoding::encode(const std::vector<Assignment> &assignments) {
         encode_pos(assignment, SATSPC::lit_Undef);
 }
 
+void Encoding::encode_shot(const std::pair<size_t, size_t> &cell,
+                           const std::vector<size_t> &vals,
+                           SATSPC::Lit selector) {
+    assert(selector != lit_Undef);
+    selector = ~selector;
+    const auto n = d_table.order();
+    const auto &[row, col] = cell;
+    auto &ls = _encoding_pos_ls;
+    if (row == col) {
+        for (size_t e = 0; e < n; e++) {
+            ls.clear();
+            ls.push(~perm(e, row));
+            const auto old_val = d_table.get(e, e);
+            bool taut = false;
+            for (const auto &val : vals) {
+                if (old_val == e && row != val)
+                    continue;
+                if (old_val == e && row == val) {
+                    taut = true;
+                    break;
+                }
+                ls.push(perm(old_val, val));
+            }
+            if (taut)
+                continue;
+            ls.push(selector);
+            d_sat.addClause_(ls);
+        }
+    } else {
+        for (size_t dom_row = 0; dom_row < n; dom_row++)
+            for (size_t dom_col = 0; dom_col < n; dom_col++) {
+                if (dom_col == dom_row)
+                    continue;
+                ls.clear();
+                ls.push(~perm(dom_row, row));
+                ls.push(~perm(dom_col, col));
+                const auto old_val = d_table.get(dom_row, dom_col);
+                bool taut = false;
+                for (const auto &val : vals) {
+                    if ((old_val == dom_row && row != val) ||
+                        (old_val == dom_col && col != val))
+                        continue;
+                    if ((old_val == dom_row && row == val) ||
+                        (old_val == dom_col && col == val)) {
+                        taut = true;
+                        break;
+                    }
+                    ls.push(perm(old_val, val));
+                }
+                if (taut)
+                    continue;
+                ls.push(selector);
+                d_sat.addClause_(ls);
+            }
+    }
+}
+
 void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
     const auto &[row, col, val] = assignment;
     const auto n = d_table.order();
