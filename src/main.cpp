@@ -60,8 +60,6 @@ int main(int argc, char **argv) {
     app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
         ->default_val(true);
     app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
-    app.add_flag("-u", options.unique, "Output only unique models")
-        ->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models")
