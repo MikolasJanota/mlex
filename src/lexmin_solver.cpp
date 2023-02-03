@@ -90,20 +90,22 @@ LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
 
 LexminSolver::~LexminSolver() {}
 
-size_t LexminSolver::find_value(const std::optional<size_t> &last_val) {
+size_t LexminSolver::find_value(Encoding::Assignment &asg,
+                                const std::optional<size_t> &last_val) {
     switch (d_options.search_type) {
-    case SearchType::lin_us: return find_value_unsat_sat(last_val);
-    case SearchType::lin_su: return find_value_sat_unsat(last_val);
-    case SearchType::bin: return find_value_bin(last_val);
-    case SearchType::bin2: return find_value_bin2(last_val);
+    case SearchType::lin_us: return find_value_unsat_sat(asg, last_val);
+    case SearchType::lin_su: return find_value_sat_unsat(asg, last_val);
+    case SearchType::bin: return find_value_bin(asg, last_val);
+    case SearchType::bin2: return find_value_bin2(asg, last_val);
     }
     assert(false);
     return -1;
 }
 
-size_t LexminSolver::find_value_bin2(const std::optional<size_t> &last_val) {
+size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg,
+                                     const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
-    auto &[row, col, cur_val] = d_assignments.back();
+    auto &[row, col, cur_val] = asg;
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
@@ -154,13 +156,14 @@ size_t LexminSolver::find_value_bin2(const std::optional<size_t> &last_val) {
 
     cur_val = ub;
     VERB(4, comment(4) << "val: " << cur_val;);
-    d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
+    d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return cur_val;
 }
 
-size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
+size_t LexminSolver::find_value_bin(Encoding::Assignment &asg,
+                                    const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
-    auto &[row, col, cur_val] = d_assignments.back();
+    auto &[row, col, cur_val] = asg;
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
@@ -197,14 +200,15 @@ size_t LexminSolver::find_value_bin(const std::optional<size_t> &last_val) {
 
     cur_val = ub;
     VERB(4, comment(4) << "val: " << cur_val;);
-    d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
+    d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return cur_val;
 }
 
 size_t
-LexminSolver::find_value_sat_unsat(const std::optional<size_t> &last_val) {
+LexminSolver::find_value_sat_unsat(Encoding::Assignment &asg,
+                                   const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
-    auto &[row, col, cur_val] = d_assignments.back();
+    auto &[row, col, cur_val] = asg;
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
@@ -227,13 +231,14 @@ LexminSolver::find_value_sat_unsat(const std::optional<size_t> &last_val) {
     }
     cur_val = ub;
     VERB(4, comment(4) << "val: " << cur_val;);
-    d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
+    d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return ub;
 }
 
 size_t
-LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
-    auto &[row, col, cur_val] = d_assignments.back();
+LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg,
+                                   const std::optional<size_t> &last_val) {
+    auto &[row, col, cur_val] = asg;
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
 
@@ -247,7 +252,7 @@ LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
         if (found) {
             TRACE(ccomment(3) << " " << cur_val << ":FREE";);
             if (d_options.incremental)
-                d_encoding->encode_pos(d_assignments.back(), SATSPC::lit_Undef);
+                d_encoding->encode_pos(asg, SATSPC::lit_Undef);
 
         } else {
             found = !skip && test_sat();
@@ -257,6 +262,20 @@ LexminSolver::find_value_unsat_sat(const std::optional<size_t> &last_val) {
             return cur_val;
     }
     assert(false);
+}
+
+void LexminSolver::run_diagonal() {
+    const auto n = d_table.order();
+
+    d_diagonal.resize(n);
+    for (size_t i = 0; i < n; i++) {
+        Encoding::Assignment a{i, i, 0};
+        const auto cur_val = find_value(
+            a, d_last_permutation.empty() ? std::nullopt
+                                          : std::make_optional(get_val(i, i)));
+        d_diagonal[i] = cur_val;
+        TRACE(ccomment(3) << std::endl;);
+    }
 }
 
 void LexminSolver::solve() {
@@ -273,6 +292,10 @@ void LexminSolver::solve() {
         d_sat = std::make_unique<SATSPC::MiniSatExt>();
         make_encoding();
         d_encoding->encode_bij();
+    }
+
+    if (d_options.diagonal) {
+        run_diagonal();
     }
 
     if (budgeting) {
@@ -298,11 +321,16 @@ void LexminSolver::solve() {
             calc.set_row(row);
 
         for (size_t col = 0; col < n; col++) {
-            d_assignments.push_back({row, col, 0});
-            const auto cur_val =
-                find_value(d_last_permutation.empty()
+            if (d_options.diagonal && col == row) {
+                d_assignments.push_back({row, col, d_diagonal[row]});
+            } else {
+                d_assignments.push_back({row, col, 0});
+                find_value(d_assignments.back(),
+                           d_last_permutation.empty()
                                ? std::nullopt
                                : std::make_optional(get_val(row, col)));
+            }
+            const auto cur_val = std::get<2>(d_assignments.back());
 
             if (d_budgets)
                 d_budgets->dec_budget(col, cur_val);
@@ -427,7 +455,8 @@ bool LexminSolver::test_sat(const std::pair<size_t, size_t> &cell,
         make_last_permutation();
     /* d_sat->addClause(rv ? selector : ~selector); */
     d_sat->addClause(~selector);
-    /* TRACE(ccomment(3) << " " << std::get<2>(d_assignments.back()) << ":" */
+    /* TRACE(ccomment(3) << " " << std::get<2>(d_assignments.back()) << ":"
+     */
     /*                   << SHOW_TIME(read_cpu_time() - start_time);); */
     return rv;
 }
@@ -445,7 +474,7 @@ bool LexminSolver::test_sat() {
 
 void LexminSolver::make_encoding() {
     d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
-    if (d_options.opt1stRow)
+    if (d_options.opt1stRow && !d_options.diagonal)
         opt1stRow();
 }
 

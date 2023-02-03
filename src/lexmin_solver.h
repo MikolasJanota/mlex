@@ -45,6 +45,8 @@ class LexminSolver {
 
     std::vector<size_t> d_fixed;
     std::vector<bool> d_used;
+    std::vector<size_t> d_diagonal;
+
     bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
     std::optional<size_t> d_0preimage;
 
@@ -70,15 +72,21 @@ class LexminSolver {
     void opt1stRow();
     void calculate_budgets_row_tot();
     void calculate_budgets_col();
+    void run_diagonal();
     void mark_used_rows(const Invariants::Info &rows, size_t current_row);
 
     // returns whether updates should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
-    size_t find_value(const std::optional<size_t> &last_val);
-    size_t find_value_unsat_sat(const std::optional<size_t> &last_val);
-    size_t find_value_sat_unsat(const std::optional<size_t> &last_val);
-    size_t find_value_bin(const std::optional<size_t> &last_val);
-    size_t find_value_bin2(const std::optional<size_t> &last_val);
+    size_t find_value(Encoding::Assignment &a,
+                      const std::optional<size_t> &last_val);
+    size_t find_value_unsat_sat(Encoding::Assignment &a,
+                                const std::optional<size_t> &last_val);
+    size_t find_value_sat_unsat(Encoding::Assignment &a,
+                                const std::optional<size_t> &last_val);
+    size_t find_value_bin(Encoding::Assignment &a,
+                          const std::optional<size_t> &last_val);
+    size_t find_value_bin2(Encoding::Assignment &a,
+                           const std::optional<size_t> &last_val);
 
     std::vector<size_t> d_last_permutation;
     std::vector<size_t> d_inv_last_permutation;

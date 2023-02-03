@@ -79,6 +79,8 @@ int main(int argc, char **argv) {
         ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
     ///// TODO better help message
 
+    app.add_flag("-d,!--no-d", options.diagonal, "Traverse diagonal first")
+        ->default_val(false);
     app.add_flag("-r,!--no-r", options.invariants, "Use row invariants")
         ->default_val(true);
     app.add_flag("-H,!--no-H", options.use_hash_table,
