@@ -17,6 +17,7 @@
 #include <memory>
 #include <tuple> // for get
 #include <vector>
+#include <zlib.h>
 using SATSPC::Lit;
 using SATSPC::mkLit;
 
@@ -275,6 +276,34 @@ void LexminSolver::run_diagonal() {
                                           : std::make_optional(get_val(i, i)));
         d_diagonal[i] = cur_val;
         TRACE(ccomment(3) << std::endl;);
+    }
+
+    DiagInvariants di_orig(d_output, n);
+    for (size_t i = 0; i < n; i++)
+        di_orig.set(i, d_table.get(i, i));
+    di_orig.calculate();
+
+    DiagInvariants di_new(d_output, n);
+    for (size_t i = 0; i < n; i++)
+        di_new.set(i, d_diagonal[i]);
+    di_new.calculate();
+    di_new.calc_inverse();
+
+    for (size_t i = 0; i < n; i++) {
+        const auto inv = di_orig.get_invariant(i);
+        const auto &inv_pre_image = di_new.get_info(inv).original_elems;
+        // disable permuting to nonmatching elements
+        for (size_t j = 0; j < n; j++)
+            if (!contains(inv_pre_image, j))
+                d_sat->addClause(~d_encoding->perm(i, j));
+        // handle the case of unique pre-image
+        if (inv_pre_image.size() == 1) {
+            d_statistics.uniqueDiagElem->inc();
+            const auto uniq_new = *(inv_pre_image.begin());
+            d_fixed[i] = uniq_new;
+            comment(2) << i << " fixed to " << uniq_new << " (diag)"
+                       << std::endl;
+        }
     }
 }
 

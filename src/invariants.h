@@ -9,8 +9,11 @@
 #include "binary_function.h"
 #include "immutable_vector.h"
 #include "options.h"
+#include <cstddef>
 #include <list>
+#include <set>
 #include <unordered_map>
+#include <vector>
 
 typedef ImmutableVector<size_t> InvariantVector;
 
@@ -54,6 +57,36 @@ class InvariantCalculator {
     size_t d_row;
     std::vector<size_t> d_invv;
     std::vector<bool> d_seen;
+};
+
+class DiagInvariants {
+  public:
+    struct Info {
+        std::set<size_t> original_elems;
+    };
+
+    DiagInvariants(Output &output, size_t order)
+        : d_output(output), d_options(output.d_options), d_order(order),
+          d_diagonal(d_order, -1) {}
+
+    void calculate();
+    void calc_inverse();
+    void set(size_t i, size_t val);
+    InvariantVector get_invariant(size_t i) const { return d_invariants[i]; }
+    Info get_info(const InvariantVector &inv) const {
+        return d_inv2elems->at(inv);
+    }
+
+  private:
+    Output &d_output;
+    const Options &d_options;
+    const size_t d_order;
+    std::vector<size_t> d_diagonal;
+    std::vector<InvariantVector> d_invariants;
+    using inv_map =
+        std::unordered_map<InvariantVector, Info, ImmutableVector_hash<size_t>,
+                           ImmutableVector_equal<size_t>>;
+    std::unique_ptr<inv_map> d_inv2elems;
 };
 
 class Invariants {

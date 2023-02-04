@@ -66,4 +66,3 @@ class Output {
     const Options &d_options;
     StatisticsManager &d_statistics;
 };
-

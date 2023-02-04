@@ -146,6 +146,7 @@ int main(int argc, char **argv) {
             gzclose(in);
 
         const auto &f = reader.f();
+        f.print(output.comment(4));
         solve(output, f);
     }
     statistics.totalTime->inc(read_cpu_time() - start_time);

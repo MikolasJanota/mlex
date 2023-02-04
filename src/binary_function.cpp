@@ -8,7 +8,12 @@
 #include <iostream>
 
 void BinaryFunction::print(std::ostream &out) const {
+    for (size_t j = 0; j < order(); j++)
+        out << ((j == 0) ? "  " : " ") << j;
+    out << std::endl;
+
     for (size_t i = 0; i < order(); i++) {
+        out << i << ":";
         for (size_t j = 0; j < order(); j++) {
             out << get(i, j);
             if (i + 1 < order() || j + 1 < order())

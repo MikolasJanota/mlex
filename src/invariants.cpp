@@ -5,6 +5,22 @@
  * Copyright (C) 2023, Mikolas Janota
  */
 #include "invariants.h"
+#include <clocale>
+#include <cstddef>
+#include <math.h>
+#include <vector>
+
+#ifdef NDEBUG
+#define TRACE(code)
+#else
+#define TRACE(code)                                                            \
+    do {                                                                       \
+        code                                                                   \
+    } while (0);                                                               \
+    do {                                                                       \
+        std::cout.flush();                                                     \
+    } while (0)
+#endif
 
 void Invariants::calculate() {
     const auto n = d_table.order();
@@ -27,3 +43,86 @@ void Invariants::calculate() {
         }
     }
 }
+class Looping {
+  public:
+    Looping(Output &output, const std::vector<size_t> &fun)
+        : d_output(output), d_order(fun.size()), d_fun(fun),
+          d_value(d_order, d_order + 1){};
+
+    bool has_val(size_t i) { return d_value[i] < d_order; }
+
+    size_t calc_loop(size_t query_ix) {
+        if (has_val(query_ix)) {
+            TRACE(d_output.comment(3)
+                      << "lc: " << query_ix << ":" << d_value[query_ix]
+                      << " (mem)" << std::endl;);
+            return d_value[query_ix];
+        }
+
+        std::vector<size_t> time(d_order, d_order + 1);
+        std::vector<size_t> stack;
+        auto next = query_ix;
+        size_t t = 0;
+        // either hit a cycle or something known
+        while (!has_val(next) && time[next] >= d_order) {
+            stack.push_back(next);
+            time[next] = t++;
+            next = d_fun[next];
+        }
+
+        const size_t known_sz =
+            has_val(next) ? d_value[next] : (t - time[next]);
+
+        if (!has_val(next)) { // process discovered cycle
+            assert(time[next] < d_order);
+            for (auto _ = known_sz; _--;) {
+                d_value[stack.back()] = known_sz;
+                stack.pop_back();
+            }
+        }
+
+        // tail of the known part
+        size_t edges = 1;
+        while (!stack.empty()) {
+            d_value[stack.back()] = known_sz + edges++;
+            stack.pop_back();
+        }
+
+        TRACE(d_output.comment(3) << "lc: " << query_ix << ":"
+                                  << d_value[query_ix] << std::endl;);
+        assert(has_val(query_ix));
+        return d_value[query_ix];
+    }
+
+  private:
+    Output &d_output;
+    const size_t d_order;
+    const std::vector<size_t> &d_fun;
+    std::vector<size_t> d_value;
+};
+
+void DiagInvariants::calculate() {
+    using vec = std::vector<size_t>;
+    std::vector<vec> invs(d_order, vec{0, 0});
+    Looping lc(d_output, d_diagonal);
+    for (auto i = d_order; i--;) {
+        invs[d_diagonal[i]][0]++; // number of occs of element
+        invs[i][1] = lc.calc_loop(i);
+    }
+    d_invariants.resize(d_order);
+    for (auto i = d_order; i--;) {
+        d_invariants[i] = InvariantVector(invs[i]);
+        TRACE(d_output.comment(3)
+                  << "diag inv: " << i << ":" << d_invariants[i] << std::endl;);
+    }
+}
+
+void DiagInvariants::calc_inverse() {
+    d_inv2elems = std::make_unique<inv_map>();
+    for (auto i = d_order; i--;) {
+        auto [it, _] = d_inv2elems->insert({d_invariants[i], Info()});
+        it->second.original_elems.insert(i);
+    }
+}
+
+void DiagInvariants::set(size_t i, size_t val) { d_diagonal[i] = val; }
