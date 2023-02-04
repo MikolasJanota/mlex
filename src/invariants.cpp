@@ -7,6 +7,7 @@
 #include "invariants.h"
 #include <clocale>
 #include <cstddef>
+#include <limits>
 #include <math.h>
 #include <vector>
 
@@ -47,11 +48,12 @@ class Looping {
   public:
     Looping(Output &output, const std::vector<size_t> &fun)
         : d_output(output), d_order(fun.size()), d_fun(fun),
-          d_value(d_order, d_order + 1){};
+          d_value(d_order, std::numeric_limits<std::size_t>::max()){};
 
-    bool has_val(size_t i) { return d_value[i] < d_order; }
+    bool has_val(size_t i) { return d_value[i] <= d_order; }
 
     size_t calc_loop(size_t query_ix) {
+        TRACE(d_output.comment(3) << "lc: " << query_ix << std::endl;);
         if (has_val(query_ix)) {
             TRACE(d_output.comment(3)
                       << "lc: " << query_ix << ":" << d_value[query_ix]
@@ -59,7 +61,8 @@ class Looping {
             return d_value[query_ix];
         }
 
-        std::vector<size_t> time(d_order, d_order + 1);
+        std::vector<size_t> time(d_order,
+                                 std::numeric_limits<std::size_t>::max());
         std::vector<size_t> stack;
         auto next = query_ix;
         size_t t = 0;

@@ -270,11 +270,11 @@ void LexminSolver::run_diagonal() {
 
     d_diagonal.resize(n);
     for (size_t i = 0; i < n; i++) {
-        Encoding::Assignment a{i, i, 0};
-        const auto cur_val = find_value(
-            a, d_last_permutation.empty() ? std::nullopt
-                                          : std::make_optional(get_val(i, i)));
-        d_diagonal[i] = cur_val;
+        Encoding::Assignment asg{i, i, 0};
+        const auto last_val = d_last_permutation.empty()
+                                  ? std::nullopt
+                                  : std::make_optional(get_val(i, i));
+        d_diagonal[i] = find_value(asg, last_val);
         TRACE(ccomment(3) << std::endl;);
     }
 
