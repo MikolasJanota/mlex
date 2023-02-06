@@ -19,6 +19,7 @@ class StatisticsManager {
         all.push_back(uniqueDiag1Elem =
                           new IntStatistic("unique diag 1st elem"));
         all.push_back(uniqueDiagElem = new IntStatistic("unique diag elem"));
+        all.push_back(inferredCells = new IntStatistic("inferred cells"));
         all.push_back(satCalls = new IntStatistic("SAT calls"));
         all.push_back(satTime = new DoubleStatistic("SAT time"));
         all.push_back(readingTime = new DoubleStatistic("Reading time"));
@@ -73,6 +74,7 @@ class StatisticsManager {
     IntStatistic *satCalls;
     IntStatistic *unique1stRow;
     IntStatistic *uniqueDiagElem;
+    IntStatistic *inferredCells;
     IntStatistic *uniqueDiag1Elem;
     IntStatistic *producedModels;
     IntStatistic *readModels;

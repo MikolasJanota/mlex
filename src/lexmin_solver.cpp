@@ -419,6 +419,7 @@ void LexminSolver::run_diagonal() {
             if (contains(fixed_elements, orig_val)) {
                 d_fixed_values->set(d_fixed[row], d_fixed[col],
                                     d_fixed[orig_val]);
+                d_statistics.inferredCells->inc();
                 comment(2) << "fixed cell " << row << " " << col << std::endl;
             }
         }
