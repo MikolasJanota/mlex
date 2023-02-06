@@ -46,27 +46,28 @@ class TrivBudget : public IBudget {
 
 class DiagBudget : public IBudget {
   public:
-    DiagBudget(size_t ord, size_t idem_reps, size_t noidem_reps)
-        : d_idems_budgets(ord, idem_reps),
-          d_no_idems_budgets(ord, noidem_reps) {}
+    DiagBudget(size_t ord, size_t reps, size_t idem_count)
+        : d_budgets(ord, reps), d_idem_count(idem_count) {}
 
     virtual bool has_budget(size_t val) const {
-        return val == d_row ? d_idems_budgets[val] : d_no_idems_budgets[val];
+        return (val != d_row || d_idem_count) && d_budgets[val];
     }
 
     void dec(size_t val) {
-        if (val == d_row)
-            d_idems_budgets[val]--;
-        else
-            d_no_idems_budgets[val]--;
+        assert(d_budgets[val] > 0);
+        d_budgets[val]--;
+        if (val == d_row) {
+            assert(d_idem_count > 0);
+            d_idem_count--;
+        }
     }
 
     void set_row(size_t row) { d_row = row; }
 
   private:
     size_t d_row;
-    std::vector<size_t> d_idems_budgets;
-    std::vector<size_t> d_no_idems_budgets;
+    std::vector<size_t> d_budgets;
+    size_t d_idem_count;
 };
 
 class RowBudgets {
@@ -144,7 +145,8 @@ size_t LexminSolver::find_value(Encoding::Assignment &asg, IBudget &budget,
         auto &[row, col, val] = asg;
         if (d_fixed_values->is_set(row, col)) {
             val = d_fixed_values->get(row, col);
-            TRACE(ccomment(3) << "fixed cell: " << val;);
+            TRACE(comment(3)
+                      << "fixed cell: (" << row << "," << col << ")=" << val;);
             return val;
         }
     }
@@ -340,17 +342,16 @@ void LexminSolver::run_diagonal() {
         di_orig.set(i, d_table.get(i, i));
     di_orig.calculate();
     size_t max_idem_reps = 0;
-    size_t max_no_idem_reps = 0;
+    size_t max_reps = 0;
     std::vector<size_t> idems;
     for (size_t i = 0; i < n; i++) {
         const auto &inv = di_orig.get_invariant(i);
         const auto reps = inv[DiagInvariants::InvariantType::REPEATS];
+        max_reps = max(max_reps, reps);
         if (inv[DiagInvariants::InvariantType::LOOP] == 1) {
-            //  idempotent
+            // idempotent
             max_idem_reps = max(max_idem_reps, reps);
             idems.push_back(i);
-        } else {
-            max_no_idem_reps = max(max_no_idem_reps, reps);
         }
     }
     if (!idems.empty()) {
@@ -370,7 +371,10 @@ void LexminSolver::run_diagonal() {
                 d_sat->addClause(~d_encoding->perm(i, 0));
     }
 
-    DiagBudget budg(n, max_idem_reps, max_no_idem_reps);
+    /* comment(2) << "max idemp diag reps: " << max_idem_reps << std::endl; */
+    /* comment(2) << "max noidemp diag reps: " << max_no_idem_reps << std::endl;
+     */
+    DiagBudget budg(n, max_reps, idems.size());
     for (size_t i = 0; i < n; i++) {
         Encoding::Assignment asg{i, i, 0};
         const auto last_val = d_last_permutation.empty()
@@ -382,6 +386,7 @@ void LexminSolver::run_diagonal() {
         budg.dec(new_val);
         TRACE(ccomment(3) << std::endl;);
     }
+    d_statistics.satCalls->print(comment(2) << "diag:") << std::endl;
 
     DiagInvariants di_new(d_output, n);
     for (size_t i = 0; i < n; i++)
