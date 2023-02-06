@@ -70,6 +70,12 @@ class DiagBudget : public IBudget {
     size_t d_idem_count;
 };
 
+#define CHECKED_DECREASE(v)                                                    \
+    do {                                                                       \
+        assert((v) > 0);                                                       \
+        (v)--;                                                                 \
+    } while (false);
+
 class RowBudgets {
   public:
     RowBudgets(const BinaryFunction &table) : d_table(table) {}
@@ -77,16 +83,17 @@ class RowBudgets {
     bool has_budget(size_t col, size_t val) const {
         assert(col < d_table.order());
         assert(val < d_table.order());
-        return (d_current_row_budget[val] > 0 && d_total_budget[val] > 0 &&
-                d_cols_budget[col][val] > 0);
+        return d_current_row_budget[val] > 0 && d_total_budget[val] > 0 &&
+               d_cols_budget[col][val] > 0;
     }
 
     void dec_budget(size_t col, size_t val) {
         assert(col < d_table.order());
         assert(val < d_table.order());
-        d_current_row_budget[val]--;
-        d_total_budget[val]--;
-        d_cols_budget[col][val]--;
+
+        CHECKED_DECREASE(d_current_row_budget[val]);
+        CHECKED_DECREASE(d_total_budget[val]);
+        CHECKED_DECREASE(d_cols_budget[col][val]);
     }
 
     std::ostream &print(std::ostream &out, size_t col, size_t val) const {
@@ -118,7 +125,7 @@ class RowBudgets {
 class RowBudgeter : public IBudget {
   public:
     RowBudgeter(RowBudgets *paren, bool trivial)
-        : d_paren(paren), d_triv(trivial), d_col(0) {}
+        : d_paren(paren), d_triv(trivial), d_col(-1) {}
 
     void set_col(size_t col) { d_col = col; }
 
@@ -178,9 +185,9 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
             vals->push_back(v);
     }
 
+    TRACE(print_set(comment(4) << "vals ", *vals););
     while (!vals->empty()) {
         assert(top->empty());
-        TRACE(print_set(comment(4) << "vals ", *vals););
 
         if (!test_sat(cell, *vals)) {
             break;
@@ -328,10 +335,7 @@ LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg,
 }
 
 void LexminSolver::run_diagonal() {
-    using std::make_pair;
     using std::max;
-    using std::optional;
-    using std::pair;
     const auto n = d_table.order();
 
     if (!d_fixed_values)
@@ -371,9 +375,6 @@ void LexminSolver::run_diagonal() {
                 d_sat->addClause(~d_encoding->perm(i, 0));
     }
 
-    /* comment(2) << "max idemp diag reps: " << max_idem_reps << std::endl; */
-    /* comment(2) << "max noidemp diag reps: " << max_no_idem_reps << std::endl;
-     */
     DiagBudget budg(n, max_reps, idems.size());
     for (size_t i = 0; i < n; i++) {
         Encoding::Assignment asg{i, i, 0};
@@ -468,12 +469,15 @@ void LexminSolver::solve() {
 
         RowBudgeter budgeter(d_budgets.get(), !d_budgets);
         for (size_t col = 0; col < n; col++) {
+            budgeter.set_col(col);
+
             d_assignments.push_back({row, col, 0});
-            find_value(d_assignments.back(), budgeter,
-                       d_last_permutation.empty()
-                           ? std::nullopt
-                           : std::make_optional(get_val(row, col)));
-            const auto cur_val = std::get<2>(d_assignments.back());
+            const auto cur_val =
+                find_value(d_assignments.back(), budgeter,
+                           d_last_permutation.empty()
+                               ? std::nullopt
+                               : std::make_optional(get_val(row, col)));
+            assert(cur_val == std::get<2>(d_assignments.back()));
 
             if (d_budgets)
                 d_budgets->dec_budget(col, cur_val);
@@ -498,6 +502,29 @@ void LexminSolver::solve() {
             calculate_budgets_row_tot();
     }
     d_is_solved = true;
+    if (!d_last_permutation.empty())
+        show_permutation(comment(2)) << std::endl;
+}
+
+std::ostream &LexminSolver::show_permutation(std::ostream &out) {
+    const auto n = d_table.order();
+    std::vector<bool> visit(n, true);
+    while (1) {
+        size_t s = 0;
+        while (s < visit.size() && !visit[s])
+            s++;
+        if (s == visit.size())
+            return out;
+        out << "(" << s;
+        visit[s] = false;
+        for (size_t i = d_last_permutation[s]; i != s;
+             i = d_last_permutation[i]) {
+            out << " " << i;
+            visit[i] = false;
+        }
+
+        out << ")";
+    }
 }
 
 void LexminSolver::make_last_permutation() {

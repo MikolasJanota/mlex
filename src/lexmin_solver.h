@@ -95,4 +95,5 @@ class LexminSolver {
     size_t get_preimage(size_t i) const;
     size_t get_image(size_t i) const;
     size_t get_val(size_t row, size_t col) const;
+    std::ostream &show_permutation(std::ostream &out);
 };
