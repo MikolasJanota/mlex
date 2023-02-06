@@ -39,9 +39,44 @@ using SATSPC::mkLit;
     } while (0)
 #endif
 
-class Budgets {
+class IBudget {
   public:
-    Budgets(const BinaryFunction &table) : d_table(table) {}
+    virtual bool has_budget(size_t val) const = 0;
+};
+
+class TrivBudget : public IBudget {
+  public:
+    virtual bool has_budget(size_t) const { return true; }
+};
+
+class DiagBudget : public IBudget {
+  public:
+    DiagBudget(size_t ord, size_t idem_reps, size_t noidem_reps)
+        : d_idems_budgets(ord, idem_reps),
+          d_no_idems_budgets(ord, noidem_reps) {}
+
+    virtual bool has_budget(size_t val) const {
+        return val == d_row ? d_idems_budgets[val] : d_no_idems_budgets[val];
+    }
+
+    void dec(size_t val) {
+        if (val == d_row)
+            d_idems_budgets[val]--;
+        else
+            d_no_idems_budgets[val]--;
+    }
+
+    void set_row(size_t row) { d_row = row; }
+
+  private:
+    size_t d_row;
+    std::vector<size_t> d_idems_budgets;
+    std::vector<size_t> d_no_idems_budgets;
+};
+
+class RowBudgets {
+  public:
+    RowBudgets(const BinaryFunction &table) : d_table(table) {}
 
     bool has_budget(size_t col, size_t val) const {
         assert(col < d_table.order());
@@ -84,6 +119,23 @@ class Budgets {
     const BinaryFunction &d_table;
 };
 
+class RowBudgeter : public IBudget {
+  public:
+    RowBudgeter(RowBudgets *paren, bool trivial)
+        : d_paren(paren), d_triv(trivial), d_col(0) {}
+
+    void set_col(size_t col) { d_col = col; }
+
+    virtual bool has_budget(size_t val) const override {
+        return d_triv || d_paren->has_budget(d_col, val);
+    }
+
+  private:
+    RowBudgets *d_paren;
+    bool d_triv;
+    size_t d_col;
+};
+
 LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
     : d_output(output), d_options(output.d_options),
       d_statistics(output.d_statistics), d_table(table),
@@ -91,19 +143,28 @@ LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
 
 LexminSolver::~LexminSolver() {}
 
-size_t LexminSolver::find_value(Encoding::Assignment &asg,
+size_t LexminSolver::find_value(Encoding::Assignment &asg, IBudget &budget,
                                 const std::optional<size_t> &last_val) {
+    if (d_fixed_values) {
+        auto &[row, col, val] = asg;
+        if (d_fixed_values->is_set(row, col)) {
+            val = d_fixed_values->get(row, col);
+            TRACE(ccomment(3) << "fixed cell: " << val;);
+            return val;
+        }
+    }
+
     switch (d_options.search_type) {
     case SearchType::lin_us: return find_value_unsat_sat(asg, last_val);
     case SearchType::lin_su: return find_value_sat_unsat(asg, last_val);
     case SearchType::bin: return find_value_bin(asg, last_val);
-    case SearchType::bin2: return find_value_bin2(asg, last_val);
+    case SearchType::bin2: return find_value_bin2(asg, budget, last_val);
     }
     assert(false);
     return -1;
 }
 
-size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg,
+size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
                                      const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
     auto &[row, col, cur_val] = asg;
@@ -116,7 +177,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg,
     std::vector<size_t> *vals = &a, *top = &b;
 
     for (size_t v = 0; v < ub; v++) {
-        if (!d_budgets || d_budgets->has_budget(col, v))
+        if (!d_budgets || budget.has_budget(v))
             vals->push_back(v);
     }
 
@@ -163,6 +224,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg,
 
 size_t LexminSolver::find_value_bin(Encoding::Assignment &asg,
                                     const std::optional<size_t> &last_val) {
+    assert(false); // TODO
     const auto n = d_table.order();
     auto &[row, col, cur_val] = asg;
     const auto cell = std::make_pair<>(row, col);
@@ -208,6 +270,8 @@ size_t LexminSolver::find_value_bin(Encoding::Assignment &asg,
 size_t
 LexminSolver::find_value_sat_unsat(Encoding::Assignment &asg,
                                    const std::optional<size_t> &last_val) {
+
+    assert(false); // TODO
     const auto n = d_table.order();
     auto &[row, col, cur_val] = asg;
     const auto cell = std::make_pair<>(row, col);
@@ -239,6 +303,7 @@ LexminSolver::find_value_sat_unsat(Encoding::Assignment &asg,
 size_t
 LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg,
                                    const std::optional<size_t> &last_val) {
+    assert(false); // TODO
     auto &[row, col, cur_val] = asg;
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
@@ -266,29 +331,70 @@ LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg,
 }
 
 void LexminSolver::run_diagonal() {
+    using std::make_pair;
+    using std::max;
+    using std::optional;
+    using std::pair;
     const auto n = d_table.order();
 
-    d_diagonal.resize(n);
-    for (size_t i = 0; i < n; i++) {
-        Encoding::Assignment asg{i, i, 0};
-        const auto last_val = d_last_permutation.empty()
-                                  ? std::nullopt
-                                  : std::make_optional(get_val(i, i));
-        d_diagonal[i] = find_value(asg, last_val);
-        TRACE(ccomment(3) << std::endl;);
-    }
+    if (!d_fixed_values)
+        d_fixed_values = std::make_unique<BinaryFunction>(n);
 
     DiagInvariants di_orig(d_output, n);
     for (size_t i = 0; i < n; i++)
         di_orig.set(i, d_table.get(i, i));
     di_orig.calculate();
+    size_t max_idem_reps = 0;
+    size_t max_no_idem_reps = 0;
+    std::vector<size_t> idems;
+    for (size_t i = 0; i < n; i++) {
+        const auto &inv = di_orig.get_invariant(i);
+        const auto reps = inv[DiagInvariants::InvariantType::REPEATS];
+        if (inv[DiagInvariants::InvariantType::LOOP] == 1) {
+            //  idempotent
+            max_idem_reps = max(max_idem_reps, reps);
+            idems.push_back(i);
+        } else {
+            max_no_idem_reps = max(max_no_idem_reps, reps);
+        }
+    }
+    if (!idems.empty()) {
+        std::set<size_t> max_rep_idems;
+        for (auto i : idems)
+            if (di_orig.get_invariant(
+                    i)[DiagInvariants::InvariantType::REPEATS] == max_idem_reps)
+                max_rep_idems.insert(i);
+        if (max_rep_idems.size() == 1) {
+            d_statistics.uniqueDiag1Elem->inc();
+            const auto i = *(max_rep_idems.begin());
+            d_fixed[i] = 0;
+            comment(2) << i << " fixed to 0 (diagonal)" << std::endl;
+        }
+        for (auto i = n; i--;)
+            if (!contains(max_rep_idems, i))
+                d_sat->addClause(~d_encoding->perm(i, 0));
+    }
+
+    DiagBudget budg(n, max_idem_reps, max_no_idem_reps);
+    for (size_t i = 0; i < n; i++) {
+        Encoding::Assignment asg{i, i, 0};
+        const auto last_val = d_last_permutation.empty()
+                                  ? std::nullopt
+                                  : std::make_optional(get_val(i, i));
+        budg.set_row(i);
+        const auto new_val = find_value(asg, budg, last_val);
+        d_fixed_values->set(i, i, new_val);
+        budg.dec(new_val);
+        TRACE(ccomment(3) << std::endl;);
+    }
 
     DiagInvariants di_new(d_output, n);
     for (size_t i = 0; i < n; i++)
-        di_new.set(i, d_diagonal[i]);
+        di_new.set(i, d_fixed_values->get(i, i));
     di_new.calculate();
     di_new.calc_inverse();
 
+    std::set<size_t> fixed_elements;
     for (size_t i = 0; i < n; i++) {
         const auto inv = di_orig.get_invariant(i);
         const auto &inv_pre_image = di_new.get_info(inv).original_elems;
@@ -301,10 +407,20 @@ void LexminSolver::run_diagonal() {
             d_statistics.uniqueDiagElem->inc();
             const auto uniq_new = *(inv_pre_image.begin());
             d_fixed[i] = uniq_new;
+            fixed_elements.insert(i);
             comment(2) << i << " fixed to " << uniq_new << " (diag)"
                        << std::endl;
         }
     }
+    for (auto row : fixed_elements)
+        for (auto col : fixed_elements) {
+            const auto orig_val = d_table.get(row, col);
+            if (contains(fixed_elements, orig_val)) {
+                d_fixed_values->set(d_fixed[row], d_fixed[col],
+                                    d_fixed[orig_val]);
+                comment(2) << "fixed cell " << row << " " << col << std::endl;
+            }
+        }
 }
 
 void LexminSolver::solve() {
@@ -328,7 +444,7 @@ void LexminSolver::solve() {
     }
 
     if (budgeting) {
-        d_budgets = std::make_unique<Budgets>(d_table);
+        d_budgets = std::make_unique<RowBudgets>(d_table);
         calculate_budgets_row_tot();
         calculate_budgets_col();
         d_budgets->reset_cols_budget();
@@ -343,22 +459,20 @@ void LexminSolver::solve() {
     for (size_t row = 0; row < n; row++) {
         comment(3) << "row:" << row << " "
                    << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
+
         if (budgeting)
             d_budgets->reset_cur_row_budget();
 
         if (d_options.invariants)
             calc.set_row(row);
 
+        RowBudgeter budgeter(d_budgets.get(), !d_budgets);
         for (size_t col = 0; col < n; col++) {
-            if (d_options.diagonal && col == row) {
-                d_assignments.push_back({row, col, d_diagonal[row]});
-            } else {
-                d_assignments.push_back({row, col, 0});
-                find_value(d_assignments.back(),
-                           d_last_permutation.empty()
-                               ? std::nullopt
-                               : std::make_optional(get_val(row, col)));
-            }
+            d_assignments.push_back({row, col, 0});
+            find_value(d_assignments.back(), budgeter,
+                       d_last_permutation.empty()
+                           ? std::nullopt
+                           : std::make_optional(get_val(row, col)));
             const auto cur_val = std::get<2>(d_assignments.back());
 
             if (d_budgets)
@@ -490,6 +604,7 @@ bool LexminSolver::test_sat(const std::pair<size_t, size_t> &cell,
     return rv;
 }
 bool LexminSolver::test_sat() {
+    assert(false); // TODO
     const auto start_time = read_cpu_time();
     const auto rv = d_options.incremental ? test_sat_inc() : test_sat_noinc();
     d_statistics.satTime->inc(read_cpu_time() - start_time);

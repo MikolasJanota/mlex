@@ -61,13 +61,13 @@ class InvariantCalculator {
 
 class DiagInvariants {
   public:
+    enum InvariantType { REPEATS = 0, LOOP = 1 };
     struct Info {
         std::set<size_t> original_elems;
     };
 
     DiagInvariants(Output &output, size_t order)
-        : d_output(output), d_options(output.d_options), d_order(order),
-          d_diagonal(d_order, -1) {}
+        : d_output(output), d_order(order), d_diagonal(d_order, -1) {}
 
     void calculate();
     void calc_inverse();
@@ -79,7 +79,6 @@ class DiagInvariants {
 
   private:
     Output &d_output;
-    const Options &d_options;
     const size_t d_order;
     std::vector<size_t> d_diagonal;
     std::vector<InvariantVector> d_invariants;
@@ -97,7 +96,7 @@ class Invariants {
     };
 
     Invariants(Output &output, const BinaryFunction &table)
-        : d_output(output), d_options(output.d_options), d_table(table) {}
+        : d_output(output), d_table(table) {}
 
     void calculate();
 
@@ -109,7 +108,6 @@ class Invariants {
 
   private:
     Output &d_output;
-    const Options &d_options;
     const BinaryFunction &d_table;
     std::unordered_map<InvariantVector, Info, ImmutableVector_hash<size_t>,
                        ImmutableVector_equal<size_t>>

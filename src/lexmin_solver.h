@@ -18,7 +18,8 @@
 #include <utility>  // for pair
 #include <vector>
 
-class Budgets;
+class RowBudgets;
+class IBudget;
 class StatisticsManager;
 
 class LexminSolver {
@@ -45,13 +46,13 @@ class LexminSolver {
 
     std::vector<size_t> d_fixed;
     std::vector<bool> d_used;
-    std::vector<size_t> d_diagonal;
+    std::unique_ptr<BinaryFunction> d_fixed_values;
 
     bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
     std::optional<size_t> d_0preimage;
 
     Invariants d_invariants;
-    std::unique_ptr<Budgets> d_budgets;
+    std::unique_ptr<RowBudgets> d_budgets;
 
     inline std::ostream &comment(int level = 0) {
         return d_output.comment(level);
@@ -77,7 +78,7 @@ class LexminSolver {
 
     // returns whether updates should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
-    size_t find_value(Encoding::Assignment &a,
+    size_t find_value(Encoding::Assignment &a, IBudget &budget,
                       const std::optional<size_t> &last_val);
     size_t find_value_unsat_sat(Encoding::Assignment &a,
                                 const std::optional<size_t> &last_val);
@@ -85,7 +86,7 @@ class LexminSolver {
                                 const std::optional<size_t> &last_val);
     size_t find_value_bin(Encoding::Assignment &a,
                           const std::optional<size_t> &last_val);
-    size_t find_value_bin2(Encoding::Assignment &a,
+    size_t find_value_bin2(Encoding::Assignment &a, IBudget &budget,
                            const std::optional<size_t> &last_val);
 
     std::vector<size_t> d_last_permutation;

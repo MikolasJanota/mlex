@@ -7,27 +7,30 @@
 #pragma once
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstddef> // for size_t
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <limits>
 #include <string> // for string
 #include <vector>
 
 class BinaryFunction {
   public:
     explicit BinaryFunction(size_t order)
-        : _order(order), _values(order * order, -1) {}
+        : _order(order),
+          _values(order * order, std::numeric_limits<std::size_t>::max()) {}
 
     void set(size_t i, size_t j, size_t val) {
         assert(i < _order && j < _order);
-        _values[i * _order + j] = val;
+        _values[ix(i, j)] = val;
     }
 
+    bool is_set(size_t i, size_t j) const { return _values[ix(i, j)] < _order; }
+
     size_t get(size_t i, size_t j) const {
-        assert(i < _order && j < _order);
-        return _values[i * _order + j];
+        assert(is_set(i, j));
+        return _values[ix(i, j)];
     }
 
     size_t order() const { return _order; }
@@ -80,4 +83,9 @@ class BinaryFunction {
     std::string _name;
     std::string _additional_info;
     std::vector<size_t> _values;
+
+    inline size_t ix(size_t i, size_t j) const {
+        assert(i < _order && j < _order);
+        return i * _order + j;
+    }
 };

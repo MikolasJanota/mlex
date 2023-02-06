@@ -111,8 +111,7 @@ int main(int argc, char **argv) {
                       << std::endl;
 
     if (in == nullptr) {
-        cerr << "ERROR! Could not open file:"
-             << (argc == 1 ? "<stdin>" : argv[1]) << endl;
+        cerr << "ERROR! Could not open file: " << file_name << endl;
         exit(EXIT_FAILURE);
     }
 

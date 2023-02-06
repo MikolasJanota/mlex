@@ -11,9 +11,7 @@
 #include <math.h>
 #include <vector>
 
-#ifdef NDEBUG
-#define TRACE(code)
-#else
+#ifndef NDEBUG
 #define TRACE(code)                                                            \
     do {                                                                       \
         code                                                                   \
@@ -21,6 +19,8 @@
     do {                                                                       \
         std::cout.flush();                                                     \
     } while (0)
+#else
+#define TRACE(code)
 #endif
 
 void Invariants::calculate() {
@@ -35,7 +35,7 @@ void Invariants::calculate() {
         auto [it, _] = d_invariants.insert({iinv, Info()});
         it->second.original_rows.push_back(row);
     }
-    if (d_options.verbose > 2) {
+    if (d_output.d_options.verbose > 2) {
         for (const auto &[inv, info] : d_invariants) {
             d_output.comment(3) << "inv " << inv << " {";
             for (const auto k : info.original_rows)
@@ -53,9 +53,8 @@ class Looping {
     bool has_val(size_t i) { return d_value[i] <= d_order; }
 
     size_t calc_loop(size_t query_ix) {
-        TRACE(d_output.comment(3) << "lc: " << query_ix << std::endl;);
         if (has_val(query_ix)) {
-            TRACE(d_output.comment(3)
+            TRACE(d_output.comment(4)
                       << "lc: " << query_ix << ":" << d_value[query_ix]
                       << " (mem)" << std::endl;);
             return d_value[query_ix];
@@ -91,7 +90,7 @@ class Looping {
             stack.pop_back();
         }
 
-        TRACE(d_output.comment(3) << "lc: " << query_ix << ":"
+        TRACE(d_output.comment(4) << "lc: " << query_ix << ":"
                                   << d_value[query_ix] << std::endl;);
         assert(has_val(query_ix));
         return d_value[query_ix];
@@ -109,8 +108,9 @@ void DiagInvariants::calculate() {
     std::vector<vec> invs(d_order, vec{0, 0});
     Looping lc(d_output, d_diagonal);
     for (auto i = d_order; i--;) {
-        invs[d_diagonal[i]][0]++; // number of occs of element
-        invs[i][1] = lc.calc_loop(i);
+        invs[d_diagonal[i]]
+            [InvariantType::REPEATS]++; // number of occs of element
+        invs[i][InvariantType::LOOP] = lc.calc_loop(i);
     }
     d_invariants.resize(d_order);
     for (auto i = d_order; i--;) {
