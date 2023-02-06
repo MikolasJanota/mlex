@@ -48,9 +48,10 @@ class DiagBudget : public IBudget {
   public:
     DiagBudget(size_t ord, size_t reps, size_t idem_count)
         : d_budgets(ord, reps), d_idem_count(idem_count) {}
+    virtual ~DiagBudget() {}
 
     virtual bool has_budget(size_t val) const {
-        return (val != d_row || d_idem_count) && d_budgets[val];
+        return (val != d_row || d_idem_count > 0) && d_budgets[val] > 0;
     }
 
     void dec(size_t val) {
@@ -64,10 +65,11 @@ class DiagBudget : public IBudget {
 
     void set_row(size_t row) { d_row = row; }
 
-  private:
-    size_t d_row;
     std::vector<size_t> d_budgets;
     size_t d_idem_count;
+
+  private:
+    size_t d_row;
 };
 
 #define CHECKED_DECREASE(v)                                                    \
@@ -181,7 +183,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
     std::vector<size_t> *vals = &a, *top = &b;
 
     for (size_t v = 0; v < ub; v++) {
-        if (!d_budgets || budget.has_budget(v))
+        if (!d_options.budgeting || budget.has_budget(v))
             vals->push_back(v);
     }
 
@@ -346,18 +348,18 @@ void LexminSolver::run_diagonal() {
         di_orig.set(i, d_table.get(i, i));
     di_orig.calculate();
     size_t max_idem_reps = 0;
-    size_t max_reps = 0;
     std::vector<size_t> idems;
     for (size_t i = 0; i < n; i++) {
         const auto &inv = di_orig.get_invariant(i);
-        const auto reps = inv[DiagInvariants::InvariantType::REPEATS];
-        max_reps = max(max_reps, reps);
         if (inv[DiagInvariants::InvariantType::LOOP] == 1) {
             // idempotent
+            const auto reps = inv[DiagInvariants::InvariantType::REPEATS];
             max_idem_reps = max(max_idem_reps, reps);
             idems.push_back(i);
         }
     }
+    std::set<size_t> fixed_elements;
+
     if (!idems.empty()) {
         std::set<size_t> max_rep_idems;
         for (auto i : idems)
@@ -368,6 +370,7 @@ void LexminSolver::run_diagonal() {
             d_statistics.uniqueDiag1Elem->inc();
             const auto i = *(max_rep_idems.begin());
             d_fixed[i] = 0;
+            fixed_elements.insert(i);
             comment(2) << i << " fixed to 0 (diagonal)" << std::endl;
         }
         for (auto i = n; i--;)
@@ -375,19 +378,47 @@ void LexminSolver::run_diagonal() {
                 d_sat->addClause(~d_encoding->perm(i, 0));
     }
 
-    DiagBudget budg(n, max_reps, idems.size());
-    for (size_t i = 0; i < n; i++) {
-        Encoding::Assignment asg{i, i, 0};
-        const auto last_val = d_last_permutation.empty()
-                                  ? std::nullopt
-                                  : std::make_optional(get_val(i, i));
-        budg.set_row(i);
-        const auto new_val = find_value(asg, budg, last_val);
-        d_fixed_values->set(i, i, new_val);
-        budg.dec(new_val);
-        TRACE(ccomment(3) << std::endl;);
+    {
+        size_t max_reps = 0;
+        size_t idem_count = 0;
+        for (size_t i = n; i--;) {
+            if (contains(fixed_elements, i))
+                continue;
+            const auto reps = di_orig.get_invariant(
+                i)[DiagInvariants::InvariantType::REPEATS];
+            max_reps = max(max_reps, reps);
+            if (d_table.get(i, i) == i)
+                idem_count++;
+        }
+
+        DiagBudget budg(n, max_reps, idem_count);
+        size_t start = 0;
+        if (!fixed_elements.empty()) {
+            assert(fixed_elements.size() == 1);
+            const auto fixed_orig = *(fixed_elements.begin());
+            start = di_orig.get_invariant(
+                fixed_orig)[DiagInvariants::InvariantType::REPEATS];
+            for (auto i = start; i--;) {
+                d_fixed_values->set(i, i, 0);
+                d_encoding->encode_pos({i, i, 0}, SATSPC::lit_Undef);
+            }
+            budg.d_budgets[0] = 0;
+            comment(2) << "offset: " << start << std::endl;
+        }
+
+        for (size_t i = start; i < n; i++) {
+            Encoding::Assignment asg{i, i, 0};
+            const auto last_val = d_last_permutation.empty()
+                                      ? std::nullopt
+                                      : std::make_optional(get_val(i, i));
+            budg.set_row(i);
+            const auto new_val = find_value(asg, budg, last_val);
+            d_fixed_values->set(i, i, new_val);
+            budg.dec(new_val);
+            TRACE(ccomment(3) << std::endl;);
+        }
+        d_statistics.satCalls->print(comment(2) << "diag:") << std::endl;
     }
-    d_statistics.satCalls->print(comment(2) << "diag:") << std::endl;
 
     DiagInvariants di_new(d_output, n);
     for (size_t i = 0; i < n; i++)
@@ -395,7 +426,6 @@ void LexminSolver::run_diagonal() {
     di_new.calculate();
     di_new.calc_inverse();
 
-    std::set<size_t> fixed_elements;
     for (size_t i = 0; i < n; i++) {
         const auto inv = di_orig.get_invariant(i);
         const auto &inv_pre_image = di_new.get_info(inv).original_elems;
