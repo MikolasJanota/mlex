@@ -21,6 +21,7 @@
 using SATSPC::Lit;
 using SATSPC::mkLit;
 
+/* #define SOLVER_TRACING */
 #if !defined(NDEBUG) || defined(SOLVER_TRACING)
 #define TRACE(code)                                                            \
     do {                                                                       \
@@ -211,7 +212,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
     }
 
     cur_val = ub;
-    TRACE(comment(4) << "val: " << cur_val;);
+    TRACE(comment(3) << "val:" << cur_val;);
     d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return cur_val;
 }
