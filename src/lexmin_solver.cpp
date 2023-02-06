@@ -21,15 +21,7 @@
 using SATSPC::Lit;
 using SATSPC::mkLit;
 
-#define VERB(level, code)                                                      \
-    if (d_options.verbose >= level)                                            \
-        do {                                                                   \
-            code                                                               \
-    } while (0)
-
-#ifdef NDEBUG
-#define TRACE(code)
-#else
+#if !defined(NDEBUG) || defined(SOLVER_TRACING)
 #define TRACE(code)                                                            \
     do {                                                                       \
         code                                                                   \
@@ -37,6 +29,8 @@ using SATSPC::mkLit;
     do {                                                                       \
         std::cout.flush();                                                     \
     } while (0)
+#else
+#define TRACE(code)
 #endif
 
 class IBudget {
@@ -183,7 +177,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
 
     while (!vals->empty()) {
         assert(top->empty());
-        VERB(4, print_set(comment(4) << "vals ", *vals););
+        TRACE(print_set(comment(4) << "vals ", *vals););
 
         if (!test_sat(cell, *vals)) {
             break;
@@ -217,7 +211,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
     }
 
     cur_val = ub;
-    VERB(4, comment(4) << "val: " << cur_val;);
+    TRACE(comment(4) << "val: " << cur_val;);
     d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return cur_val;
 }
@@ -242,7 +236,7 @@ size_t LexminSolver::find_value_bin(Encoding::Assignment &asg,
 
     while (!vals->empty()) {
         assert(top->empty());
-        VERB(4, print_set(comment(4) << "vals ", *vals););
+        TRACE(print_set(comment(4) << "vals ", *vals););
 
         const auto split = vals->size() / 2 + vals->size() % 2;
         for (size_t h = split; h < vals->size(); h++)
@@ -262,7 +256,7 @@ size_t LexminSolver::find_value_bin(Encoding::Assignment &asg,
     }
 
     cur_val = ub;
-    VERB(4, comment(4) << "val: " << cur_val;);
+    TRACE(comment(4) << "val: " << cur_val;);
     d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return cur_val;
 }
@@ -295,7 +289,7 @@ LexminSolver::find_value_sat_unsat(Encoding::Assignment &asg,
         /* print_set(std::cerr << "af:", vals) << std::endl; */
     }
     cur_val = ub;
-    VERB(4, comment(4) << "val: " << cur_val;);
+    TRACE(comment(4) << "val: " << cur_val;);
     d_encoding->encode_pos(asg, SATSPC::lit_Undef);
     return ub;
 }
@@ -569,7 +563,7 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
     for (auto k : rows)
         d_used[k] = true;
 
-    VERB(3, print_set(comment(3) << "used ", rows););
+    TRACE(print_set(comment(3) << "used ", rows););
 
     // disable further rows to be mapped to the used ones
     for (auto k : rows)
@@ -633,7 +627,7 @@ void LexminSolver::opt1stRow() {
     if (idems.empty())
         return; // TODO
 
-    VERB(3, print_set(comment(3) << "idems ", idems) << std::endl;);
+    TRACE(print_set(comment(3) << "idems ", idems) << std::endl;);
 
     // count repetitions f(r,y)=r
     std::vector<size_t> repeats(n, 0);
@@ -760,7 +754,7 @@ void LexminSolver::calculate_budgets_row_tot() {
         if (!is_fixed(val))
             max_total_occs = std::max(max_total_occs, total_occs[val]);
 
-    VERB(3, print_set(comment(3) << "total_occs ", total_occs) << std::endl;);
+    TRACE(print_set(comment(3) << "total_occs ", total_occs) << std::endl;);
     comment(2) << "max occ./row: " << max_row_occs << std::endl;
     comment(2) << "max occ./tot: " << max_total_occs << std::endl;
 
