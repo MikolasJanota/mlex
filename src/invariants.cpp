@@ -124,7 +124,7 @@ void DiagInvariants::calc_inverse() {
     d_inv2elems = std::make_unique<inv_map>();
     for (auto i = d_order; i--;) {
         auto [it, _] = d_inv2elems->insert({d_invariants[i], Info()});
-        it->second.original_elems.insert(i);
+        it->second.elems.insert(i);
     }
 }
 

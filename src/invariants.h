@@ -63,7 +63,7 @@ class DiagInvariants {
   public:
     enum InvariantType { REPEATS = 0, LOOP = 1 };
     struct Info {
-        std::set<size_t> original_elems;
+        std::set<size_t> elems;
     };
 
     DiagInvariants(Output &output, size_t order)
@@ -73,8 +73,17 @@ class DiagInvariants {
     void calc_inverse();
     void set(size_t i, size_t val);
     InvariantVector get_invariant(size_t i) const { return d_invariants[i]; }
-    Info get_info(const InvariantVector &inv) const {
-        return d_inv2elems->at(inv);
+
+    size_t get_reps(size_t i) const {
+        return d_invariants[i][InvariantType::REPEATS];
+    }
+
+    size_t get_loop(size_t i) const {
+        return d_invariants[i][InvariantType::LOOP];
+    }
+
+    const std::set<size_t> &get_elems(const InvariantVector &inv) const {
+        return d_inv2elems->at(inv).elems;
     }
 
   private:
