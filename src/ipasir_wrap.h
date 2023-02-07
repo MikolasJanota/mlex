@@ -21,7 +21,7 @@ class MiniSatExt {
     std::unordered_map<std::string, SATSPC::Lit> *d_representatives = nullptr;
     std::unordered_map<SATSPC::Var, std::string> *d_inverse_representatives =
         nullptr;
-    inline const Minisat::LSet &               conflict() { return _conflict; }
+    inline const Minisat::LSet &conflict() { return _conflict; }
     inline const Minisat::vec<Minisat::lbool> &model() { return _model; }
 
     void set_representatives(
@@ -61,6 +61,9 @@ class MiniSatExt {
         return addClause(cl);
     }
 
+    inline void releaseVar(Lit l) { addClause(l); }
+    inline bool simplify() {}
+
     inline bool addClause(const std::vector<Minisat::Lit> &cl) {
         for (const auto &l : cl)
             add(l);
@@ -95,8 +98,8 @@ class MiniSatExt {
     }
 
     inline Minisat::Var fresh() { return ++_nvars; }
-    inline bool         is_ok_var(int v) { return 1 <= _nvars && v <= _nvars; }
-    int                 nVars() const { return _nvars; }
+    inline bool is_ok_var(int v) { return 1 <= _nvars && v <= _nvars; }
+    int nVars() const { return _nvars; }
 
     inline Minisat::lbool eval_lit(const Minisat::Lit &l) const {
         const Minisat::lbool lval = _model[var(l)];
@@ -107,9 +110,9 @@ class MiniSatExt {
                           : Minisat::l_False);
     }
 
-    bool                 solve(const Minisat::vec<Minisat::Lit> &assumps);
-    bool                 solve();
-    inline std::ostream &print_literal(std::ostream &      output,
+    bool solve(const Minisat::vec<Minisat::Lit> &assumps);
+    bool solve();
+    inline std::ostream &print_literal(std::ostream &output,
                                        const Minisat::Lit &p) {
         output << (sign(p) ? '-' : '+');
         const auto print_name =
@@ -124,13 +127,13 @@ class MiniSatExt {
 
   private:
     /* const int           _verb = 1; */
-    int                          _nvars;
-    Minisat::Lit                 _true_lit;
-    void *                       _s;
-    Minisat::vec<Minisat::Lit>   _assumps;
-    Minisat::LSet                _conflict;
+    int _nvars;
+    Minisat::Lit _true_lit;
+    void *_s;
+    Minisat::vec<Minisat::Lit> _assumps;
+    Minisat::LSet _conflict;
     Minisat::vec<Minisat::lbool> _model;
-    inline int                   lit2val(const Minisat::Lit &p) {
+    inline int lit2val(const Minisat::Lit &p) {
         return Minisat::sign(p) ? -Minisat::var(p) : Minisat::var(p);
     }
 
@@ -177,9 +180,9 @@ inline bool MiniSatExt::solve() {
         _model.growTo(_nvars + 1, Minisat::l_Undef);
         for (int v = _nvars; v; v--) {
             const int vval = ipasir_val(_s, v);
-            _model[v]      = (vval == 0)
-                                 ? Minisat::l_Undef
-                                 : (vval < 0 ? Minisat::l_False : Minisat::l_True);
+            _model[v] = (vval == 0)
+                            ? Minisat::l_Undef
+                            : (vval < 0 ? Minisat::l_False : Minisat::l_True);
         }
     }
     return r == 10;

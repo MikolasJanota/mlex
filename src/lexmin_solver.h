@@ -65,11 +65,10 @@ class LexminSolver {
     }
 
     void make_encoding();
-    bool test_sat();
+    bool test_sat(const Encoding::Assignment &asg);
     bool test_sat(const std::pair<size_t, size_t> &cell,
                   const std::vector<size_t> &vals);
-    bool test_sat_noinc();
-    bool test_sat_inc();
+    bool test_sat_inc(const Encoding::Assignment &asg);
 
     /* try to infer additional constraints on the first row */
     void opt1stRow();
@@ -85,11 +84,11 @@ class LexminSolver {
     bool process_invariant(const InvariantVector &invv, size_t current_row);
     size_t find_value(Encoding::Assignment &a, IBudget &budget,
                       const std::optional<size_t> &last_val);
-    size_t find_value_unsat_sat(Encoding::Assignment &a,
+    size_t find_value_unsat_sat(Encoding::Assignment &a, IBudget &budget,
                                 const std::optional<size_t> &last_val);
-    size_t find_value_sat_unsat(Encoding::Assignment &a,
+    size_t find_value_sat_unsat(Encoding::Assignment &a, IBudget &budget,
                                 const std::optional<size_t> &last_val);
-    size_t find_value_bin(Encoding::Assignment &a,
+    size_t find_value_bin(Encoding::Assignment &a, IBudget &budget,
                           const std::optional<size_t> &last_val);
     size_t find_value_bin2(Encoding::Assignment &a, IBudget &budget,
                            const std::optional<size_t> &last_val);
