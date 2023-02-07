@@ -44,12 +44,6 @@ void Encoding::encode_bij() {
     }
 }
 
-void Encoding::encode(const std::vector<Assignment> &assignments) {
-    encode_bij();
-    for (const auto &assignment : assignments)
-        encode_pos(assignment, SATSPC::lit_Undef);
-}
-
 void Encoding::encode_shot(const std::pair<size_t, size_t> &cell,
                            const std::vector<size_t> &vals,
                            SATSPC::Lit selector) {
