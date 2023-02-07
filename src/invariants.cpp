@@ -5,10 +5,13 @@
  * Copyright (C) 2023, Mikolas Janota
  */
 #include "invariants.h"
-#include <clocale>
+#include "binary_function.h"
+#include "immutable_vector.h"
+#include "options.h"
+#include <cassert>
 #include <cstddef>
+#include <iostream> // for operator<<, ostream, basic_ostream, endl
 #include <limits>
-#include <math.h>
 #include <vector>
 
 /* #define INVARIANT_TRACING */

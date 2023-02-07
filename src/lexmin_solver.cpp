@@ -17,7 +17,6 @@
 #include <memory>
 #include <tuple> // for get
 #include <vector>
-#include <zlib.h>
 using SATSPC::Lit;
 using SATSPC::mkLit;
 

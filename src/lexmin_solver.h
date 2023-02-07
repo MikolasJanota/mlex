@@ -15,6 +15,7 @@
 #include <iosfwd>  // for ostream
 #include <memory>
 #include <optional> // for optional
+#include <set>      // for set
 #include <utility>  // for pair
 #include <vector>
 

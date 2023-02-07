@@ -5,17 +5,20 @@
  * Copyright (C) 2023, Mikolas Janota
  */
 #pragma once
-#include "auxiliary.h"
-#include "binary_function.h"
 #include "immutable_vector.h"
-#include "options.h"
+#include <cassert>
 #include <cstddef>
 #include <list>
+#include <memory> // for unique_ptr
 #include <set>
 #include <unordered_map>
+#include <utility> // for pair
 #include <vector>
 
 typedef ImmutableVector<size_t> InvariantVector;
+
+class BinaryFunction;
+class Output;
 
 class InvariantCalculator {
   public:
