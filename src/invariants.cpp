@@ -11,7 +11,8 @@
 #include <math.h>
 #include <vector>
 
-#ifndef NDEBUG
+/* #define INVARIANT_TRACING */
+#if !defined(NDEBUG) || defined(INVARIANT_TRACING)
 #define TRACE(code)                                                            \
     do {                                                                       \
         code                                                                   \
