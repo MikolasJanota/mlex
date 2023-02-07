@@ -5,6 +5,7 @@
  * Created on October 12, 2011
  */
 #pragma once
+#include <set>
 #include <sys/time.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -71,6 +72,11 @@ inline bool insert_chk(std::unordered_set<K> &es, const K &e) {
 
 template <class M, class K> bool contains(const M &m, const K &e) {
     return m.find(e) != m.end();
+}
+
+template <class K> const K &first(const std::set<K> &m) {
+    assert(!m.empty());
+    return *(m.begin());
 }
 
 template <class C> std::ostream &print_set(std::ostream &out, const C &m) {

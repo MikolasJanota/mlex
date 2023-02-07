@@ -150,10 +150,10 @@ LexminSolver::~LexminSolver() {}
 
 size_t LexminSolver::find_value(Encoding::Assignment &asg, IBudget &budget,
                                 const std::optional<size_t> &last_val) {
-    if (d_fixed_values) {
+    if (d_fixed_cells) {
         auto &[row, col, val] = asg;
-        if (d_fixed_values->is_set(row, col)) {
-            val = d_fixed_values->get(row, col);
+        if (d_fixed_cells->is_set(row, col)) {
+            val = d_fixed_cells->get(row, col);
             TRACE(comment(3)
                       << "fixed cell: (" << row << "," << col << ")=" << val;);
             return val;
@@ -336,119 +336,132 @@ LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg,
     assert(false);
 }
 
+/* The output table will contain max_idem_reps 0's at the beginning. If
+ * max_idem_reps > 0 these are the only 0's.*/
+void LexminSolver::calculate_diagonal(
+    size_t max_idem_reps, const DiagInvariants &di_orig,
+    const std::set<size_t> &fixed_src_elements) {
+    using std::max;
+    assert(fixed_src_elements.size() <= 1); // fixed first idem
+    const auto n = d_table.order();
+
+    // statistics for non-fixed
+    size_t max_reps = 0;
+    size_t idem_count = 0;
+    for (size_t i = n; i--;) {
+        if (contains(fixed_src_elements, i))
+            continue;
+        max_reps = max(max_reps, di_orig.get_reps(i));
+        if (d_table.get(i, i) == i)
+            idem_count++;
+    }
+
+    // set up budgeting for the diagonal
+    DiagBudget budg(n, max_reps, idem_count);
+    if (max_idem_reps > 0)
+        budg.d_budgets[0] = 0;
+
+    // place max_idem_reps 0's at beginning
+    for (auto i = max_idem_reps; i--;) {
+        d_fixed_cells->set(i, i, 0);
+        d_encoding->encode_pos({i, i, 0}, SATSPC::lit_Undef);
+    }
+
+    // calculate the rest of the diagonal
+    for (size_t i = max_idem_reps; i < n; i++) {
+        Encoding::Assignment asg{i, i, 0};
+        const auto last_val = d_last_permutation.empty()
+                                  ? std::nullopt
+                                  : std::make_optional(get_val(i, i));
+        budg.set_row(i);
+        const auto new_val = find_value(asg, budg, last_val);
+        d_fixed_cells->set(i, i, new_val);
+        budg.dec(new_val);
+        TRACE(ccomment(3) << std::endl;);
+    }
+    d_statistics.satCalls->print(comment(2) << "diag:") << std::endl;
+}
+
 void LexminSolver::run_diagonal() {
     using std::max;
     const auto n = d_table.order();
 
-    if (!d_fixed_values)
-        d_fixed_values = std::make_unique<BinaryFunction>(n);
+    if (!d_fixed_cells)
+        d_fixed_cells = std::make_unique<BinaryFunction>(n);
 
+    // process invariants in the input table
     DiagInvariants di_orig(d_output, n);
-    for (size_t i = 0; i < n; i++)
+    for (size_t i = n; i--;)
         di_orig.set(i, d_table.get(i, i));
     di_orig.calculate();
-    size_t max_idem_reps = 0;
-    std::vector<size_t> idems;
-    for (size_t i = 0; i < n; i++) {
-        const auto &inv = di_orig.get_invariant(i);
-        if (inv[DiagInvariants::InvariantType::LOOP] == 1) {
+    size_t max_idem_reps = 0;  // max reps of an idem
+    std::vector<size_t> idems; // list of idems
+    for (size_t i = n; i--;) {
+        if (di_orig.get_loop(i) == 1) {
             // idempotent
-            const auto reps = inv[DiagInvariants::InvariantType::REPEATS];
-            max_idem_reps = max(max_idem_reps, reps);
+            max_idem_reps = max(max_idem_reps, di_orig.get_reps(i));
             idems.push_back(i);
         }
     }
-    std::set<size_t> fixed_elements;
 
+    std::set<size_t> fixed_src_elements;
+
+    // try identifying candidates for 0
     if (!idems.empty()) {
-        std::set<size_t> max_rep_idems;
+        // idempotents that appear the most times
+        std::set<size_t> candidates;
         for (auto i : idems)
-            if (di_orig.get_invariant(
-                    i)[DiagInvariants::InvariantType::REPEATS] == max_idem_reps)
-                max_rep_idems.insert(i);
-        if (max_rep_idems.size() == 1) {
+            if (di_orig.get_reps(i) == max_idem_reps)
+                candidates.insert(i);
+        if (candidates.size() == 1) { // top left corner fixed
             d_statistics.uniqueDiag1Elem->inc();
-            const auto i = *(max_rep_idems.begin());
-            d_fixed[i] = 0;
-            fixed_elements.insert(i);
-            comment(2) << i << " fixed to 0 (diagonal)" << std::endl;
+            const auto preimage0 = first(candidates);
+            d_fixed[preimage0] = 0;
+            fixed_src_elements.insert(preimage0);
+            comment(2) << preimage0 << " fixed to 0 (diagonal)" << std::endl;
         }
+        // prohibit non-candidates to be mapped to 0
         for (auto i = n; i--;)
-            if (!contains(max_rep_idems, i))
+            if (!contains(candidates, i))
                 d_sat->addClause(~d_encoding->perm(i, 0));
     }
 
-    {
-        size_t max_reps = 0;
-        size_t idem_count = 0;
-        for (size_t i = n; i--;) {
-            if (contains(fixed_elements, i))
-                continue;
-            const auto reps = di_orig.get_invariant(
-                i)[DiagInvariants::InvariantType::REPEATS];
-            max_reps = max(max_reps, reps);
-            if (d_table.get(i, i) == i)
-                idem_count++;
-        }
+    calculate_diagonal(max_idem_reps, di_orig, fixed_src_elements);
 
-        DiagBudget budg(n, max_reps, idem_count);
-        size_t start = 0;
-        if (!fixed_elements.empty()) {
-            assert(fixed_elements.size() == 1);
-            const auto fixed_orig = *(fixed_elements.begin());
-            start = di_orig.get_invariant(
-                fixed_orig)[DiagInvariants::InvariantType::REPEATS];
-            for (auto i = start; i--;) {
-                d_fixed_values->set(i, i, 0);
-                d_encoding->encode_pos({i, i, 0}, SATSPC::lit_Undef);
-            }
-            budg.d_budgets[0] = 0;
-            comment(2) << "offset: " << start << std::endl;
-        }
-
-        for (size_t i = start; i < n; i++) {
-            Encoding::Assignment asg{i, i, 0};
-            const auto last_val = d_last_permutation.empty()
-                                      ? std::nullopt
-                                      : std::make_optional(get_val(i, i));
-            budg.set_row(i);
-            const auto new_val = find_value(asg, budg, last_val);
-            d_fixed_values->set(i, i, new_val);
-            budg.dec(new_val);
-            TRACE(ccomment(3) << std::endl;);
-        }
-        d_statistics.satCalls->print(comment(2) << "diag:") << std::endl;
-    }
-
+    // calculate invariants for the destination table's  diagonal
     DiagInvariants di_new(d_output, n);
     for (size_t i = 0; i < n; i++)
-        di_new.set(i, d_fixed_values->get(i, i));
+        di_new.set(i, d_fixed_cells->get(i, i));
     di_new.calculate();
     di_new.calc_inverse();
 
-    for (size_t i = 0; i < n; i++) {
-        const auto inv = di_orig.get_invariant(i);
-        const auto &inv_pre_image = di_new.get_info(inv).original_elems;
+    // identify elements based on corresponding invariants
+    for (size_t src = 0; src < n; src++) {
+        const auto &dest_corresp = di_new.get_elems(di_orig.get_invariant(src));
         // disable permuting to nonmatching elements
-        for (size_t j = 0; j < n; j++)
-            if (!contains(inv_pre_image, j))
-                d_sat->addClause(~d_encoding->perm(i, j));
-        // handle the case of unique pre-image
-        if (inv_pre_image.size() == 1) {
+        for (size_t dest = n; dest--;)
+            if (!contains(dest_corresp, dest))
+                d_sat->addClause(~d_encoding->perm(src, dest));
+        // handle the singleton case
+        if (dest_corresp.size() == 1) {
             d_statistics.uniqueDiagElem->inc();
-            const auto uniq_new = *(inv_pre_image.begin());
-            d_fixed[i] = uniq_new;
-            fixed_elements.insert(i);
-            comment(2) << i << " fixed to " << uniq_new << " (diag)"
+            d_fixed[src] = first(dest_corresp);
+            fixed_src_elements.insert(src);
+            comment(2) << src << " fixed to " << d_fixed[src] << " (diag)"
                        << std::endl;
         }
     }
-    for (auto row : fixed_elements)
-        for (auto col : fixed_elements) {
-            const auto orig_val = d_table.get(row, col);
-            if (contains(fixed_elements, orig_val)) {
-                d_fixed_values->set(d_fixed[row], d_fixed[col],
-                                    d_fixed[orig_val]);
+
+    closure_fixed(fixed_src_elements);
+}
+
+void LexminSolver::closure_fixed(const std::set<size_t> &fixed_src_elements) {
+    for (auto row : fixed_src_elements)
+        for (auto col : fixed_src_elements) {
+            const auto src_val = d_table.get(row, col);
+            if (contains(fixed_src_elements, src_val)) {
+                d_fixed_cells->set(d_fixed[row], d_fixed[col],
+                                   d_fixed[src_val]);
                 d_statistics.inferredCells->inc();
                 comment(2) << "fixed cell " << row << " " << col << std::endl;
             }

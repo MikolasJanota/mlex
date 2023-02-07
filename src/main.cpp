@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     // in one of the strings or in one of the translations already
     app.add_option("-t,--search-type", options.search_type,
                    "set the search type")
-        ->default_val(SearchType::lin_us)
+        ->default_val(SearchType::bin2)
         ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
     ///// TODO better help message
 
