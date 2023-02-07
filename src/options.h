@@ -30,10 +30,10 @@ enum SearchType { lin_us, lin_su, bin, bin2 };
 
 struct Options {
     int verbose = 0;
-    bool incremental = false;
     bool mace_format = false;
     bool unique = false;
     bool opt1stRow = false;
+    bool simp_sat_row = false;
     bool budgeting = false;
     bool invariants = false;
     bool last_solution = false;

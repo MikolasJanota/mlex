@@ -31,6 +31,7 @@ class Encoding {
 #ifndef NDEBUG
         LOGIPASIR(d_sat.set_representatives(&d_representatives););
 #endif
+        _encoding_pos_ls.capacity(2 * table.order());
         setup_perms();
     }
 

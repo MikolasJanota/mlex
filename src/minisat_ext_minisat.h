@@ -32,10 +32,13 @@ class MiniSatExt {
     /* inline void bump(Var var) { _solver.varBumpActivity(var); } */
     inline void new_variables(Var max_id);
 
+    inline bool simplify() { return _solver.simplify(); }
     inline bool solve() { return _solver.solve(); }
     inline bool solve(const vec<Lit> &assumps) {
         return _solver.solve(assumps);
     }
+
+    void releaseVar(Lit l) { _solver.releaseVar(l); }
 
 #ifdef USE_MINISATSIMP
     inline void setFrozen(Var v, bool b) { _solver.setFrozen(v, b); }

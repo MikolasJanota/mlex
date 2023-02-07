@@ -52,8 +52,6 @@ int main(int argc, char **argv) {
 
     std::string file_name;
     app.add_option("file_name", file_name, "file name")->default_val("-");
-    app.add_flag("-i", options.incremental, "use incremental SAT solving.")
-        ->default_val(true);
     app.add_flag("-1, !--no-1", options.opt1stRow,
                  "Try to optimize for the first row of the table")
         ->default_val(true);
@@ -65,8 +63,8 @@ int main(int argc, char **argv) {
     app.add_flag("-u", options.unique, "Output only unique models")
         ->default_val(false);
 
-    //  adapted from
-    //  https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
+    // adapted from
+    // https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
     std::map<std::string, SearchType> map{{"lus", SearchType::lin_us},
                                           {"lsu", SearchType::lin_su},
                                           {"bin", SearchType::bin},
@@ -94,6 +92,9 @@ int main(int argc, char **argv) {
            "--seq-counter-lits", options.seq_counter_lits,
            "Number of literals when to switch to seq counter enc for at most 1")
         ->default_val(10);
+    app.add_flag("--simp_sat_row,!--no-simp_sat_row", options.simp_sat_row,
+                 "Simplify SAT solver each row (minisat)")
+        ->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
@@ -104,8 +105,6 @@ int main(int argc, char **argv) {
     if (argc == 1)
         output.comment() << "Reading from standard input." << std::endl;
 
-    output.comment(1) << "incrementality: "
-                      << (options.incremental ? "true" : "false") << std::endl;
     output.comment(1) << "verbosity: " << options.verbose << std::endl;
     output.comment(1) << "seq_counter_lits: " << options.seq_counter_lits
                       << std::endl;
@@ -115,10 +114,8 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    if (options.search_type == SearchType::lin_su &&
-        (!options.last_solution || !options.incremental)) {
-        cerr << "ERROR!  multishot search requires last solution and "
-                "incremental to be set"
+    if (options.search_type == SearchType::lin_su && !options.last_solution) {
+        cerr << "ERROR! multishot search requires last solution to be set"
              << endl;
         ;
         exit(EXIT_FAILURE);
