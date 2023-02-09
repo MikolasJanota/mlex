@@ -104,7 +104,12 @@ size_t ReadMace::read(int max) {
         match_chars(d_in, "(_,_),[");
         for (size_t i = 0; i < order; i++) {
             for (size_t j = 0; j < order; j++) {
-                f->set(i, j, parseInt(d_in));
+                const auto val = parseInt(d_in);
+                if (val < 0 || val >= static_cast<int>(order)) {
+                  std::cerr << "value '" << val << "' out of range" << std::endl;
+                  exit(EXIT_FAILURE);
+                }
+                f->set(i, j, val);
                 if (i + 1 < order || j + 1 < order)
                     match_char(d_in, ',');
             }
