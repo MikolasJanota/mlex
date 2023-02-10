@@ -8,6 +8,7 @@
 #include "auxiliary.h"
 #include "binary_function.h" // for BinaryFunction
 #include "comp_function.h"   // for CompFunction, CompFunction_hash, CompFu...
+#include "graph.h"
 #include "lexmin_solver.h"
 #include "options.h"
 #include "read_gap.h"
@@ -58,6 +59,7 @@ int main(int argc, char **argv) {
     app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
         ->default_val(true);
     app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
+    app.add_flag("-G", options.graph, "Graph")->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models")
@@ -142,8 +144,16 @@ int main(int argc, char **argv) {
             gzclose(in);
 
         const auto &f = reader.f();
-        f.print(output.comment(4));
-        solve(output, f);
+        if (options.graph) {
+            Graph g(f);
+            g.make();
+            g.print_nauty(cout) << endl;
+            /* g.print_dot(cout) << endl; */
+
+        } else {
+            f.print(output.comment(4));
+            solve(output, f);
+        }
     }
     statistics.totalTime->inc(read_cpu_time() - start_time);
     for (const auto s : statistics.all)

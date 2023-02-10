@@ -30,6 +30,7 @@ enum SearchType { lin_us, lin_su, bin, bin2 };
 
 struct Options {
     int verbose = 0;
+    bool graph = false;
     bool mace_format = false;
     bool unique = false;
     bool opt1stRow = false;
