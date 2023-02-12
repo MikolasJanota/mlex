@@ -116,6 +116,14 @@ void Graph::make_edges() {
             e(celln, rown);
             e(celln, valn);
         }
+    for (size_t i = 0; i < n; ++i) {
+      const auto valn = d_valns[i];
+      const auto rown = d_rowns[i];
+      const auto coln = d_colns[i];
+      e(valn, rown);
+      e(valn, coln);
+      e(coln, rown);
+    }
 }
 
 void Graph::make() {
