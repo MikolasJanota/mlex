@@ -85,3 +85,15 @@ template <class C> std::ostream &print_set(std::ostream &out, const C &m) {
         out << " " << e;
     return out << " }";
 }
+template <class C> std::ostream &print_vec(std::ostream &out, const C &m) {
+    out << "[";
+    bool f = true;
+    for (const auto &e : m) {
+        if (!f)
+            out << ",";
+        else
+            f = false;
+        out << " " << e;
+    }
+    return out << " ]";
+}

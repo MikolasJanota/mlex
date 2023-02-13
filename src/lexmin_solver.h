@@ -32,6 +32,9 @@ class LexminSolver {
     BinaryFunction *make_solution();
     CompFunction make_solution_comp();
 
+    void set_diag(const std::vector<size_t> &diag) { d_diag = diag; }
+    void set_diag_(std::vector<size_t> &diag) { d_diag = std::move(diag); }
+
   private:
     Output &d_output;
     const Options &d_options;
@@ -39,6 +42,7 @@ class LexminSolver {
     const BinaryFunction &d_table;
 
     bool d_is_solved = false;
+    std::vector<size_t> d_diag;
 
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<Encoding> d_encoding;

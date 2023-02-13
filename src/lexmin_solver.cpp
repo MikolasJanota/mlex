@@ -409,7 +409,17 @@ void LexminSolver::run_diagonal() {
                 d_sat->addClause(~d_encoding->perm(i, 0));
     }
 
-    calculate_diagonal(max_idem_reps, di_orig, fixed_src_elements);
+    if (d_diag.empty()) {
+        calculate_diagonal(max_idem_reps, di_orig, fixed_src_elements);
+    } else {
+        for (size_t i = 0; i < n; ++i) {
+            const auto val = d_diag[i];
+            comment(3) << i << ":" << val << " by diag file" << std::endl;
+            assert(i >= max_idem_reps || val == 0);
+            d_fixed_cells->set(i, i, val);
+            d_encoding->encode_pos({i, i, val}, SATSPC::lit_Undef);
+        }
+    }
 
     // calculate invariants for the destination table's  diagonal
     DiagInvariants di_new(d_output, n);

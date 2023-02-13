@@ -10,6 +10,7 @@
 #include "comp_function.h"   // for CompFunction, CompFunction_hash, CompFu...
 #include "lexmin_solver.h"
 #include "options.h"
+#include "read_diags.h"
 #include "read_gap.h"
 #include "read_mace.h"
 #include "statistics.h"
@@ -58,6 +59,8 @@ int main(int argc, char **argv) {
     app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
         ->default_val(true);
     app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
+    app.add_option("--diag-file", options.diag_file, "diag_file")
+        ->default_val("");
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models")
@@ -120,10 +123,17 @@ int main(int argc, char **argv) {
         ;
         exit(EXIT_FAILURE);
     }
+    if (!options.diag_file.empty() && !options.diagonal) {
+        cerr << "ERROR! diagonal file only makes sense in the diagonal mode"
+             << endl;
+        ;
+        exit(EXIT_FAILURE);
+    }
 
     prn_header(output);
 
     start_time = read_cpu_time();
+
     if (options.mace_format) {
         ReadMace reader(output, in);
         solve_more(output, reader);
@@ -292,11 +302,32 @@ static void solve_more(Output &output, ReadMace &reader) {
 }
 
 static void solve(Output &output, const BinaryFunction &table) {
+    const auto &options(output.d_options);
+    std::vector<size_t> diag;
+    if (!options.diag_file.empty()) {
+        gzFile din = gzopen(options.diag_file.c_str(), "rb");
+        ReadDiags rd(output, din);
+        while (rd.read(1)) {
+            diag = rd.diags()[0];
+            /* print_vec(cerr, rd.diags()[0]) << endl; */
+            rd.clear();
+            break;
+        }
+        gzclose(din);
+    }
+
     LexminSolver solver(output, table);
+    if (!diag.empty()) {
+        if (diag.size() != table.order()) {
+            cerr << "ERROR!  Diagonals order doesn't match tables order"
+                 << endl;
+            exit(EXIT_FAILURE);
+        }
+        solver.set_diag_(diag);
+    }
     solver.solve();
     output.d_statistics.producedModels->inc();
     std::unique_ptr<BinaryFunction> solution(solver.make_solution());
-    const auto &options(output.d_options);
     if (options.mace_format)
         solution->print_mace(cout);
     else

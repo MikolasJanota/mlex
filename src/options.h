@@ -42,6 +42,7 @@ struct Options {
     size_t seq_counter_lits = 10;
     SearchType search_type = SearchType::lin_us;
     const char *comment_prefix = "#";
+    std::string diag_file;
 };
 
 class Output {
