@@ -24,6 +24,13 @@ class InvariantCalculator {
   public:
     InvariantCalculator(size_t n) : d_n(n) {}
 
+    void add_loop(size_t loop_sz) {
+        const auto inv_id = invariant_count + loop_sz;
+        if (d_invv.size() <= inv_id)
+            d_invv.resize(inv_id + 1, 0);
+        d_invv[inv_id]++;
+    }
+
     void set_val(size_t col, size_t val) {
         size_t inv_id = 0;
         if (val == d_row)
@@ -125,3 +132,20 @@ class Invariants {
                        ImmutableVector_equal<size_t>>
         d_invariants;
 };
+
+class Looping {
+  public:
+    Looping(Output &output, const std::vector<size_t> &fun)
+        : d_output(output), d_order(fun.size()), d_fun(fun),
+          d_value(d_order, std::numeric_limits<std::size_t>::max()){};
+
+    bool has_val(size_t i) { return d_value[i] <= d_order; }
+    size_t calc_loop(size_t query_ix);
+
+  private:
+    Output &d_output;
+    const size_t d_order;
+    const std::vector<size_t> &d_fun;
+    std::vector<size_t> d_value;
+};
+

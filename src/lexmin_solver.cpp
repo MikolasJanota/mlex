@@ -420,8 +420,9 @@ void LexminSolver::run_diagonal() {
             d_encoding->encode_pos({i, i, val}, SATSPC::lit_Undef);
         }
     }
+    show_diag(comment(2) << "diag:") << std::endl;
 
-    // calculate invariants for the destination table's  diagonal
+    // calculate invariants for the destination table's diagonal
     DiagInvariants di_new(d_output, n);
     for (size_t i = 0; i < n; i++)
         di_new.set(i, d_fixed_cells->get(i, i));
@@ -489,11 +490,12 @@ void LexminSolver::solve() {
     d_assignments.clear();
     d_assignments.reserve(n * n);
 
+    std::vector<size_t> row_vals(n, -1);
     InvariantCalculator calc(n);
 
     const auto start_time = read_cpu_time();
     for (size_t row = 0; row < n; row++) {
-        comment(3) << "row:" << row << " "
+        comment(2) << "row:" << row << " "
                    << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
 
         if (d_options.simp_sat_row)
@@ -502,8 +504,9 @@ void LexminSolver::solve() {
         if (budgeting)
             d_budgets->reset_cur_row_budget();
 
-        if (d_options.invariants)
+        if (d_options.invariants) {
             calc.set_row(row);
+        }
 
         RowBudgeter budgeter(d_budgets.get(), !d_budgets);
         for (size_t col = 0; col < n; col++) {
@@ -520,16 +523,22 @@ void LexminSolver::solve() {
             if (d_budgets)
                 d_budgets->dec_budget(col, cur_val);
 
-            if (d_options.invariants)
+            if (d_options.invariants) {
                 calc.set_val(col, cur_val);
+                row_vals[col] = cur_val;
+            }
 
             TRACE(ccomment(3) << std::endl;);
         }
 
         bool update_budgets = false;
 
-        if (d_options.invariants && row + 1 < n)
+        if (d_options.invariants && row + 1 < n) {
+            Looping lc(d_output, row_vals);
+            for (auto col = n; col--;)
+                calc.add_loop(lc.calc_loop(col));
             update_budgets = process_invariant(calc.make_ivec(), row);
+        }
 
         if (row == 1 && d_0preimage) {
             d_used[*d_0preimage] = true; // mark preimage of first row as used
@@ -544,6 +553,13 @@ void LexminSolver::solve() {
         show_permutation(comment(2) << "perm:") << std::endl;
 }
 
+std::ostream &LexminSolver::show_diag(std::ostream &out) {
+    const auto n = d_table.order();
+    out << '[';
+    for (size_t i = 0; i < n; i++)
+        out << (i ? ", " : " ") << d_fixed_cells->get(i, i);
+    return out << ']';
+}
 std::ostream &LexminSolver::show_permutation(std::ostream &out) {
     const auto n = d_table.order();
     std::vector<bool> visit(n, true);

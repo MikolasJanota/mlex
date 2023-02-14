@@ -31,8 +31,8 @@
 
 using namespace std;
 static void prn_header(Output &);
-static void solve(Output &, const BinaryFunction &);
 static void solve_more(Output &options, ReadMace &reader);
+static void solve_more_gaps(Output &options, ReadGAP &reader, ReadDiags *);
 static double start_time;
 /* #define LM_SET */
 
@@ -106,9 +106,11 @@ int main(int argc, char **argv) {
     gzFile in = use_std ? gzdopen(0, "rb") : gzopen(file_name.c_str(), "rb");
 
     if (argc == 1)
-        output.comment() << "Reading from standard input." << std::endl;
+        output.comment() << "Reading from standard input." << endl;
+    else
+        output.comment() << "Reading from " << file_name << endl;
 
-    output.comment(1) << "verbosity: " << options.verbose << std::endl;
+    output.comment(1) << "verbosity: " << options.verbose << endl;
     output.comment(1) << "seq_counter_lits: " << options.seq_counter_lits
                       << std::endl;
 
@@ -140,20 +142,17 @@ int main(int argc, char **argv) {
         if (!use_std)
             gzclose(in);
     } else {
-        ReadGAP reader(in);
-        reader.read();
-        statistics.readModels->inc();
-        statistics.readingTime->inc(read_cpu_time() - start_time);
-        if (!reader.has_f()) {
-            cerr << "function not read" << endl;
-            exit(EXIT_FAILURE);
+        gzFile din;
+        ReadGAP reader(output, in);
+        unique_ptr<ReadDiags> drd;
+        if (!options.diag_file.empty()) {
+            din = gzopen(options.diag_file.c_str(), "rb");
+            drd = make_unique<ReadDiags>(output, din);
         }
-        if (!use_std)
-            gzclose(in);
-
-        const auto &f = reader.f();
-        f.print(output.comment(4));
-        solve(output, f);
+        solve_more_gaps(output, reader, drd.get());
+        gzclose(in);
+        if (drd)
+            gzclose(din);
     }
     statistics.totalTime->inc(read_cpu_time() - start_time);
     for (const auto s : statistics.all)
@@ -255,6 +254,47 @@ static int read(Output &output, ReadMace &reader, int max_read) {
     return rv;
 }
 
+static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
+    auto &options(output.d_options);
+    auto &statistics(output.d_statistics);
+    while (reader.read(1) > 0) {
+        statistics.readModels->inc();
+        statistics.readingTime->inc(read_cpu_time() - start_time);
+        if (reader.functions().empty()) {
+            cerr << "function not read" << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        const auto &f = *(reader.functions().begin()->get());
+        if (options.verbose > 3)
+            f.print(cout, options.comment_prefix);
+        LexminSolver solver(output, f);
+
+        if (dgs) {
+            dgs->read(1);
+            if (dgs->diags().empty()) {
+                cerr << "diags not read" << endl;
+                exit(EXIT_FAILURE);
+            }
+            const auto &diag = dgs->diags()[0];
+            if (diag.size() != f.order()) {
+                cerr << "wrong order of diagonal (" << diag.size() << ")"
+                     << endl;
+                exit(EXIT_FAILURE);
+            }
+            solver.set_diag(diag);
+            dgs->clear();
+        }
+        output.comment(1) << "solving order:" << f.order() << " " << std::endl;
+
+        solver.solve();
+        output.d_statistics.producedModels->inc();
+        std::unique_ptr<BinaryFunction> solution(solver.make_solution());
+        solution->print_gap(cout);
+        reader.clear();
+    }
+}
+
 static void solve_more(Output &output, ReadMace &reader) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
@@ -299,39 +339,6 @@ static void solve_more(Output &output, ReadMace &reader) {
             statistics.producedModels->inc();
         }
     }
-}
-
-static void solve(Output &output, const BinaryFunction &table) {
-    const auto &options(output.d_options);
-    std::vector<size_t> diag;
-    if (!options.diag_file.empty()) {
-        gzFile din = gzopen(options.diag_file.c_str(), "rb");
-        ReadDiags rd(output, din);
-        while (rd.read(1)) {
-            diag = rd.diags()[0];
-            /* print_vec(cerr, rd.diags()[0]) << endl; */
-            rd.clear();
-            break;
-        }
-        gzclose(din);
-    }
-
-    LexminSolver solver(output, table);
-    if (!diag.empty()) {
-        if (diag.size() != table.order()) {
-            cerr << "ERROR!  Diagonals order doesn't match tables order"
-                 << endl;
-            exit(EXIT_FAILURE);
-        }
-        solver.set_diag_(diag);
-    }
-    solver.solve();
-    output.d_statistics.producedModels->inc();
-    std::unique_ptr<BinaryFunction> solution(solver.make_solution());
-    if (options.mace_format)
-        solution->print_mace(cout);
-    else
-        solution->print_gap(cout);
 }
 
 void prn_header(Output &output) {

@@ -32,8 +32,15 @@ class LexminSolver {
     BinaryFunction *make_solution();
     CompFunction make_solution_comp();
 
-    void set_diag(const std::vector<size_t> &diag) { d_diag = diag; }
-    void set_diag_(std::vector<size_t> &diag) { d_diag = std::move(diag); }
+    void set_diag(const std::vector<size_t> &diag) {
+        assert(diag.size() == d_table.order());
+        d_diag = diag;
+    }
+
+    void set_diag_(std::vector<size_t> &diag) {
+        assert(diag.size() == d_table.order());
+        d_diag = std::move(diag);
+    }
 
   private:
     Output &d_output;
@@ -105,4 +112,5 @@ class LexminSolver {
     size_t get_image(size_t i) const;
     size_t get_val(size_t row, size_t col) const;
     std::ostream &show_permutation(std::ostream &out);
+    std::ostream &show_diag(std::ostream &out);
 };

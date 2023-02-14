@@ -62,7 +62,7 @@ class MiniSatExt {
     }
 
     inline void releaseVar(Lit l) { addClause(l); }
-    inline bool simplify() {}
+    inline bool simplify() { return true; }
 
     inline bool addClause(const std::vector<Minisat::Lit> &cl) {
         for (const auto &l : cl)
