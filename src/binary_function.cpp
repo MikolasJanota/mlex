@@ -27,12 +27,11 @@ void BinaryFunction::print(std::ostream &out, const char *pre) const {
 void BinaryFunction::print_gap(std::ostream &output) {
     const auto n = order();
     output << "[ " << std::endl;
-    std::setw(3);
     for (size_t row = 0; row < n; row++) {
         output << "[";
         for (size_t col = 0; col < n; col++) {
             output << (col ? " , " : " ");
-            output << get(row, col) + 1;
+            output << std::setw(3) << get(row, col) + 1;
         }
         output << " ]" << ((row + 1) < n ? "," : "") << std::endl;
     }

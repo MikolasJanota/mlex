@@ -29,7 +29,9 @@ class null_out_stream : public std::ostream {
 enum SearchType { lin_us, lin_su, bin, bin2 };
 
 struct Options {
+    std::string file_name;
     int verbose = 0;
+    bool graph = false;
     bool mace_format = false;
     bool unique = false;
     bool opt1stRow = false;

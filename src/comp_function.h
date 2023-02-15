@@ -61,6 +61,7 @@ class CompFunction {
     uint64_t get(size_t i) const { return d_data[i]; }
     inline uint64_t get_hash() const { return d_hash; }
 
+    void print_gap(std::ostream &output) const;
     void print_mace(std::ostream &output,
                     const std::string &additional_info) const;
     void set_name(const std::string &s) { _name = s; }

@@ -8,6 +8,7 @@
 #include "auxiliary.h"
 #include "binary_function.h" // for BinaryFunction
 #include "comp_function.h"   // for CompFunction, CompFunction_hash, CompFu...
+#include "graph.h"
 #include "lexmin_solver.h"
 #include "options.h"
 #include "read_diags.h"
@@ -17,8 +18,10 @@
 #include "trie.h"
 #include "version.h"
 #include <cassert> // for assert
+#include <cstddef>
 #include <cstdint> // for uint64_t
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <map>       // for map
 #include <memory>    // for unique_ptr
@@ -32,6 +35,7 @@
 using namespace std;
 static void prn_header(Output &);
 static void solve_more(Output &options, ReadMace &reader);
+static void prn_mace_graphs(Output &output, ReadMace &reader);
 static void solve_more_gaps(Output &options, ReadGAP &reader, ReadDiags *);
 static double start_time;
 /* #define LM_SET */
@@ -51,8 +55,8 @@ int main(int argc, char **argv) {
     StatisticsManager statistics;
     Output output(options, statistics);
 
-    std::string file_name;
-    app.add_option("file_name", file_name, "file name")->default_val("-");
+    app.add_option("file_name", options.file_name, "file name")
+        ->default_val("-");
     app.add_flag("-1, !--no-1", options.opt1stRow,
                  "Try to optimize for the first row of the table")
         ->default_val(true);
@@ -61,6 +65,7 @@ int main(int argc, char **argv) {
     app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
     app.add_option("--diag-file", options.diag_file, "diag_file")
         ->default_val("");
+    app.add_flag("-G", options.graph, "Graph")->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models")
@@ -102,20 +107,21 @@ int main(int argc, char **argv) {
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
 
-    const bool use_std = file_name == "-";
-    gzFile in = use_std ? gzdopen(0, "rb") : gzopen(file_name.c_str(), "rb");
+    const bool use_std = options.file_name == "-";
+    gzFile in =
+        use_std ? gzdopen(0, "rb") : gzopen(options.file_name.c_str(), "rb");
 
-    if (argc == 1)
+    if (use_std)
         output.comment() << "Reading from standard input." << endl;
     else
-        output.comment() << "Reading from " << file_name << endl;
+        output.comment() << "Reading from " << options.file_name << endl;
 
     output.comment(1) << "verbosity: " << options.verbose << endl;
     output.comment(1) << "seq_counter_lits: " << options.seq_counter_lits
                       << std::endl;
 
     if (in == nullptr) {
-        cerr << "ERROR! Could not open file: " << file_name << endl;
+        cerr << "ERROR! Could not open file: " << options.file_name << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -138,7 +144,11 @@ int main(int argc, char **argv) {
 
     if (options.mace_format) {
         ReadMace reader(output, in);
-        solve_more(output, reader);
+        if (options.graph) {
+            prn_mace_graphs(output, reader);
+        } else {
+            solve_more(output, reader);
+        }
         if (!use_std)
             gzclose(in);
     } else {
@@ -194,6 +204,7 @@ static void process_table_trie(
 static void process_table_ht(Output &output, const BinaryFunction &table,
                              LexminSolver &solver, std::unique_ptr<HT> &ht) {
     auto &statistics(output.d_statistics);
+    const auto &options(output.d_options);
     CompFunction sol = solver.make_solution_comp();
     sol.set_name(table.get_name());
     /* sol.set_additional_info(table.get_additional_info()); */
@@ -202,7 +213,10 @@ static void process_table_ht(Output &output, const BinaryFunction &table,
         sol.free();
         return;
     }
-    sol.print_mace(cout, table.get_additional_info());
+    if (options.mace_format)
+        sol.print_mace(cout, table.get_additional_info());
+    else
+        sol.print_gap(cout);
     statistics.producedModels->inc();
 }
 
@@ -254,18 +268,60 @@ static int read(Output &output, ReadMace &reader, int max_read) {
     return rv;
 }
 
-static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
+static void prn_mace_graphs(Output &output, ReadMace &reader) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
-    while (reader.read(1) > 0) {
+    for (size_t cnt = 0; reader.read(1) > 0; ++cnt) {
         statistics.readModels->inc();
         statistics.readingTime->inc(read_cpu_time() - start_time);
         if (reader.functions().empty()) {
-            cerr << "function not read" << endl;
+            cerr << "Function not read" << endl;
             exit(EXIT_FAILURE);
         }
-
         const auto &f = *(reader.functions().begin()->get());
+
+        const string output_file_name =
+            options.file_name + "_" + std::to_string(cnt) + ".dre";
+        ofstream output_file(output_file_name);
+        Graph g(f);
+        g.make();
+        g.print_nauty(output_file) << endl;
+        /* g.print_dot(output_file) << endl; */
+        reader.clear();
+    }
+}
+
+static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
+    auto &options(output.d_options);
+    auto &statistics(output.d_statistics);
+    const auto use_ht = options.unique && options.use_hash_table;
+    const auto use_trie = options.unique && !options.use_hash_table;
+    std::unique_ptr<ModelTrie> mt(use_trie ? new ModelTrie() : nullptr);
+    std::unique_ptr<HT> ht(use_ht ? new HT() : nullptr);
+    std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
+
+    for (size_t cnt = 0; reader.read(1) > 0; ++cnt) {
+        statistics.readModels->inc();
+        statistics.readingTime->inc(read_cpu_time() - start_time);
+        if (reader.functions().empty()) {
+            cerr << "Function not read" << endl;
+            exit(EXIT_FAILURE);
+        }
+        const auto &f = *(reader.functions().begin()->get());
+
+        if (options.graph) {
+            const string output_file_name =
+                options.file_name + "_" + std::to_string(cnt) + ".dre";
+            /* options.file_name + "_" + std::to_string(cnt) + ".dot"; */
+            ofstream output_file(output_file_name);
+            Graph g(f);
+            g.make();
+            g.print_nauty(output_file) << endl;
+            /* g.print_dot(output_file) << endl; */
+            reader.clear();
+            continue;
+        }
+
         if (options.verbose > 3)
             f.print(cout, options.comment_prefix);
         LexminSolver solver(output, f);
@@ -288,10 +344,16 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
         output.comment(1) << "solving order:" << f.order() << " " << std::endl;
 
         solver.solve();
-        output.d_statistics.producedModels->inc();
-        std::unique_ptr<BinaryFunction> solution(solver.make_solution());
-        solution->print_gap(cout);
+
+        if (use_ht) {
+            process_table_ht(output, f, solver, ht);
+        } else if (use_trie) {
+            process_table_trie(output, f, solver, mt, unique_solutions);
+        } else {
+            process_table_plain(output, f, solver);
+        }
         reader.clear();
+        cnt++;
     }
 }
 
