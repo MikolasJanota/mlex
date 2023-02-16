@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
     app.add_option("--diag-file", options.diag_file, "diag_file")
         ->default_val("");
     app.add_flag("-G", options.graph, "Graph")->default_val(false);
+    app.add_flag("-P", options.print, "Print into files")->default_val(false);
     app.add_flag("-m", options.mace_format, "Use mace format for input/output")
         ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models")
@@ -179,9 +180,9 @@ static void process_table_plain(Output &output, const BinaryFunction &table,
     solution->set_name(table.get_name());
     solution->set_additional_info(table.get_additional_info());
     if (options.mace_format)
-        solution->print_mace(cout);
+        solution->print_mace(cout) << endl;
     else
-        solution->print_gap(cout);
+        solution->print_gap(cout) << endl;
 }
 
 static void process_table_trie(
@@ -214,9 +215,9 @@ static void process_table_ht(Output &output, const BinaryFunction &table,
         return;
     }
     if (options.mace_format)
-        sol.print_mace(cout, table.get_additional_info());
+        sol.print_mace(cout, table.get_additional_info()) << endl;
     else
-        sol.print_gap(cout);
+        sol.print_gap(cout) << endl;
     statistics.producedModels->inc();
 }
 
@@ -268,12 +269,18 @@ static int read(Output &output, ReadMace &reader, int max_read) {
     return rv;
 }
 
+static int read(Output &output, ReadGAP &reader, int max_read) {
+    const auto t0 = read_cpu_time();
+    const auto rv = reader.read(max_read);
+    output.d_statistics.readingTime->inc(read_cpu_time() - t0);
+    return rv;
+}
+
 static void prn_mace_graphs(Output &output, ReadMace &reader) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
-    for (size_t cnt = 0; reader.read(1) > 0; ++cnt) {
+    for (size_t cnt = 0; read(output, reader, 1) > 0; ++cnt) {
         statistics.readModels->inc();
-        statistics.readingTime->inc(read_cpu_time() - start_time);
         if (reader.functions().empty()) {
             cerr << "Function not read" << endl;
             exit(EXIT_FAILURE);
@@ -300,24 +307,49 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
     std::unique_ptr<HT> ht(use_ht ? new HT() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
 
-    for (size_t cnt = 0; reader.read(1) > 0; ++cnt) {
+    for (size_t cnt = 0; read(output, reader, 1) > 0; ++cnt) {
         statistics.readModels->inc();
-        statistics.readingTime->inc(read_cpu_time() - start_time);
         if (reader.functions().empty()) {
             cerr << "Function not read" << endl;
             exit(EXIT_FAILURE);
         }
         const auto &f = *(reader.functions().begin()->get());
+        std::vector<size_t> min_diag;
+        if (dgs) {
+            dgs->read(1);
+            if (dgs->diags().empty()) {
+                cerr << "diags not read" << endl;
+                exit(EXIT_FAILURE);
+            }
+            min_diag = std::move(dgs->diags()[0]);
+            if (min_diag.size() != f.order()) {
+                cerr << "diagonal order mismatch (" << min_diag.size() << ")"
+                     << endl;
+                exit(EXIT_FAILURE);
+            }
+            dgs->clear();
+        }
 
-        if (options.graph) {
-            const string output_file_name =
-                options.file_name + "_" + std::to_string(cnt) + ".dre";
-            /* options.file_name + "_" + std::to_string(cnt) + ".dot"; */
+        if (options.graph || options.print) {
+            const string output_file_name = options.file_name + "_" +
+                                            std::to_string(cnt) +
+                                            (options.graph ? ".dre" : ".gap");
             ofstream output_file(output_file_name);
-            Graph g(f);
-            g.make();
-            g.print_nauty(output_file) << endl;
-            /* g.print_dot(output_file) << endl; */
+            if (options.graph) {
+                Graph g(f);
+                g.make();
+                g.print_nauty(output_file) << endl << endl;
+                /* g.print_dot(output_file) << endl; */
+            } else {
+                f.print_gap(output_file << '[') << ']' << endl;
+                if (dgs) {
+                    const string diag_output_file_name =
+                        options.file_name + "_" + std::to_string(cnt) + ".diag";
+                    ofstream diag_output_file(diag_output_file_name);
+                    print_vec(diag_output_file << "[[", min_diag, 1)
+                        << ", ()]]\n";
+                }
+            }
             reader.clear();
             continue;
         }
@@ -327,19 +359,7 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
         LexminSolver solver(output, f);
 
         if (dgs) {
-            dgs->read(1);
-            if (dgs->diags().empty()) {
-                cerr << "diags not read" << endl;
-                exit(EXIT_FAILURE);
-            }
-            const auto &diag = dgs->diags()[0];
-            if (diag.size() != f.order()) {
-                cerr << "wrong order of diagonal (" << diag.size() << ")"
-                     << endl;
-                exit(EXIT_FAILURE);
-            }
-            solver.set_diag(diag);
-            dgs->clear();
+            solver.set_diag(min_diag);
         }
         output.comment(1) << "solving order:" << f.order() << " " << std::endl;
 

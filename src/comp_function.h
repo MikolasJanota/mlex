@@ -61,9 +61,9 @@ class CompFunction {
     uint64_t get(size_t i) const { return d_data[i]; }
     inline uint64_t get_hash() const { return d_hash; }
 
-    void print_gap(std::ostream &output) const;
-    void print_mace(std::ostream &output,
-                    const std::string &additional_info) const;
+    std::ostream &print_gap(std::ostream &output) const;
+    std::ostream &print_mace(std::ostream &output,
+                             const std::string &additional_info) const;
     void set_name(const std::string &s) { _name = s; }
     const std::string &get_name() const { return _name; }
     uint64_t *get_data() const { return d_data; }
@@ -119,7 +119,7 @@ class CompFunctionReader {
 
     size_t next() {
         if (d_buf.empty()) {
-			d_buf.resize(d_fits);
+            d_buf.resize(d_fits);
             size_t val = d_f.get(d_pos++);
             for (auto i = d_fits; i--;) {
                 d_buf[i] = val & d_mask;

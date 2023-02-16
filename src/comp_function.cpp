@@ -6,7 +6,7 @@
  */
 #include "comp_function.h"
 #include <cstdlib>
-void CompFunction::print_gap(std::ostream &output) const {
+std::ostream &CompFunction::print_gap(std::ostream &output) const {
     if (d_arity != 2) {
         std::cerr << "arity other than 2 not handled yet" << std::endl;
         exit(1);
@@ -27,11 +27,11 @@ void CompFunction::print_gap(std::ostream &output) const {
         else
             output << ",";
     }
-    output << "]" << std::endl;
+    return output << "]";
 }
 
-void CompFunction::print_mace(std::ostream &output,
-                              const std::string &info) const {
+std::ostream &CompFunction::print_mace(std::ostream &output,
+                                       const std::string &info) const {
     if (d_arity != 2) {
         std::cerr << "arity other than 2 not handled yet" << std::endl;
         exit(1);
@@ -54,6 +54,6 @@ void CompFunction::print_mace(std::ostream &output,
                 output << std::endl;
         }
     }
-    output << "])])." << std::endl;
+    return output << "])]).";
 }
 

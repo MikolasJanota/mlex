@@ -24,21 +24,19 @@ void BinaryFunction::print(std::ostream &out, const char *pre) const {
         out << std::endl;
     }
 }
-void BinaryFunction::print_gap(std::ostream &output) {
+std::ostream &BinaryFunction::print_gap(std::ostream &output) const {
     const auto n = order();
     output << "[ " << std::endl;
     for (size_t row = 0; row < n; row++) {
         output << "[";
-        for (size_t col = 0; col < n; col++) {
-            output << (col ? " , " : " ");
-            output << std::setw(3) << get(row, col) + 1;
-        }
-        output << " ]" << ((row + 1) < n ? "," : "") << std::endl;
+        for (size_t col = 0; col < n; col++)
+            output << (col ? "," : "") << (get(row, col) + 1);
+        output << "]" << ((row + 1) < n ? "," : "") << std::endl;
     }
-    output << "]" << std::endl;
+    return output << "]";
 }
 
-void BinaryFunction::print_mace(std::ostream &output) {
+std::ostream &BinaryFunction::print_mace(std::ostream &output) const {
     const auto n = order();
     output << "interpretation( " << n << ", [" << get_additional_info()
            << "], [" << std::endl;
@@ -52,7 +50,6 @@ void BinaryFunction::print_mace(std::ostream &output) {
         }
         if (row + 1 < n)
             output << "," << std::endl;
-        ;
     }
-    output << "])])." << std::endl;
+    return output << "])]).";
 }

@@ -31,6 +31,7 @@ enum SearchType { lin_us, lin_su, bin, bin2 };
 struct Options {
     std::string file_name;
     int verbose = 0;
+    bool print = false;
     bool graph = false;
     bool mace_format = false;
     bool unique = false;

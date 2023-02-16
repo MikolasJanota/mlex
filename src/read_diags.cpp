@@ -69,8 +69,10 @@ size_t ReadDiags::read(int max) {
     if (d_closed)
         return 0;
     if (!d_open) {
-        match_string(d_in, "mindiags");
-        match_string(d_in, ":=");
+        if (check_next_char(d_in) == 'm') {
+            match_string(d_in, "mindiags");
+            match_string(d_in, ":=");
+        }
         match_char(d_in, '[');
         d_open = true;
     }

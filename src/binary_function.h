@@ -73,8 +73,8 @@ class BinaryFunction {
     void set_additional_info(const std::string &s) { _additional_info = s; }
     const std::string &get_additional_info() const { return _additional_info; }
 
-    void print_gap(std::ostream &output);
-    void print_mace(std::ostream &output);
+    std::ostream &print_gap(std::ostream &output) const;
+    std::ostream &print_mace(std::ostream &output) const;
 
   private:
     const size_t _order;

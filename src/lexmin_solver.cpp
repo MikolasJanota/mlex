@@ -661,6 +661,7 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
     if (info.used == 1) {
         d_fixed[rows.back()] = current_row;
         comment(2) << rows.back() << " fixed to " << current_row << std::endl;
+        d_statistics.uniqueInv->inc();
     }
 }
 
