@@ -35,7 +35,7 @@
 using namespace std;
 static void prn_header(Output &);
 static void solve_more(Output &options, ReadMace &reader);
-static void prn_mace_graphs(Output &output, ReadMace &reader);
+static void prn_mace(Output &output, ReadMace &reader);
 static void solve_more_gaps(Output &options, ReadGAP &reader, ReadDiags *);
 static double start_time;
 /* #define LM_SET */
@@ -145,8 +145,8 @@ int main(int argc, char **argv) {
 
     if (options.mace_format) {
         ReadMace reader(output, in);
-        if (options.graph) {
-            prn_mace_graphs(output, reader);
+        if (options.graph || options.print) {
+            prn_mace(output, reader);
         } else {
             solve_more(output, reader);
         }
@@ -276,7 +276,7 @@ static int read(Output &output, ReadGAP &reader, int max_read) {
     return rv;
 }
 
-static void prn_mace_graphs(Output &output, ReadMace &reader) {
+static void prn_mace(Output &output, ReadMace &reader) {
     auto &options(output.d_options);
     auto &statistics(output.d_statistics);
     for (size_t cnt = 0; read(output, reader, 1) > 0; ++cnt) {
@@ -287,13 +287,26 @@ static void prn_mace_graphs(Output &output, ReadMace &reader) {
         }
         const auto &f = *(reader.functions().begin()->get());
 
-        const string output_file_name =
-            options.file_name + "_" + std::to_string(cnt) + ".dre";
+        const string output_file_name = options.file_name + "_" +
+                                        std::to_string(cnt) +
+                                        (options.graph ? ".dre" : ".gap");
         ofstream output_file(output_file_name);
-        Graph g(f);
-        g.make();
-        g.print_nauty(output_file) << endl;
-        /* g.print_dot(output_file) << endl; */
+        if (options.graph) {
+            Graph g(f);
+            g.make();
+            g.print_nauty(output_file) << endl;
+            /* g.print_dot(output_file) << endl; */
+        } else {
+            f.print_mace(output_file) << endl;
+            /* if (dgs) { */
+            /*     const string diag_output_file_name = */
+            /*         options.file_name + "_" + std::to_string(cnt) + ".diag";
+             */
+            /*     ofstream diag_output_file(diag_output_file_name); */
+            /*     print_vec(diag_output_file << "[[", min_diag, 1) */
+            /*         << ", ()]]\n"; */
+            /* } */
+        }
         reader.clear();
     }
 }
