@@ -462,7 +462,7 @@ void LexminSolver::closure_fixed() {
             }
             d_fixed_cells->set(rdst, cdst, vdst);
             d_statistics.inferredCells->inc();
-            comment(2) << "fixed cell " << row << " " << col << std::endl;
+            comment(2) << "fixing cell " << row << " " << col << std::endl;
         }
 }
 
