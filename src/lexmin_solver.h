@@ -62,7 +62,18 @@ class LexminSolver {
     /** cells already fixed in the output table **/
     std::unique_ptr<BinaryFunction> d_fixed_cells;
 
+    std::set<size_t> d_fixed_src_elements;
+
     bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
+    bool fix_elem(size_t src, size_t dst) {
+        const auto [_, success] = d_fixed_src_elements.insert(src);
+        if (success)
+            d_statistics.fixedElements->inc();
+        assert(success || d_fixed[src] == dst);
+        d_fixed[src] = dst;
+        return success;
+    }
+
     std::optional<size_t> d_0preimage;
 
     Invariants d_invariants;
@@ -87,9 +98,9 @@ class LexminSolver {
     void calculate_budgets_row_tot();
     void calculate_budgets_col();
     void run_diagonal();
-    void closure_fixed(const std::set<size_t> &fixed_src_elements);
-    void calculate_diagonal(size_t max_idem_reps, const DiagInvariants &di_orig,
-                            const std::set<size_t> &fixed_src_elements);
+    void closure_fixed();
+    void calculate_diagonal(size_t max_idem_reps,
+                            const DiagInvariants &di_orig);
     void mark_used_rows(const Invariants::Info &rows, size_t current_row);
 
     // returns whether updates should be updated

@@ -321,18 +321,17 @@ LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg, IBudget &budget,
 
 /* The output table will contain max_idem_reps 0's at the beginning. If
  * max_idem_reps > 0 these are the only 0's.*/
-void LexminSolver::calculate_diagonal(
-    size_t max_idem_reps, const DiagInvariants &di_orig,
-    const std::set<size_t> &fixed_src_elements) {
+void LexminSolver::calculate_diagonal(size_t max_idem_reps,
+                                      const DiagInvariants &di_orig) {
     using std::max;
-    assert(fixed_src_elements.size() <= 1); // fixed first idem
+    assert(d_fixed_src_elements.size() <= 1); // fixed first idem
     const auto n = d_table.order();
 
     // statistics for non-fixed
     size_t max_reps = 0;
     size_t idem_count = 0;
     for (size_t i = n; i--;) {
-        if (contains(fixed_src_elements, i))
+        if (contains(d_fixed_src_elements, i))
             continue;
         max_reps = max(max_reps, di_orig.get_reps(i));
         if (d_table.get(i, i) == i)
@@ -387,8 +386,6 @@ void LexminSolver::run_diagonal() {
         }
     }
 
-    std::set<size_t> fixed_src_elements;
-
     // try identifying candidates for 0
     if (!idems.empty()) {
         // idempotents that appear the most times
@@ -398,10 +395,9 @@ void LexminSolver::run_diagonal() {
                 candidates.insert(i);
         if (candidates.size() == 1) { // top left corner fixed
             d_statistics.uniqueDiag1Elem->inc();
-            const auto preimage0 = first(candidates);
-            d_fixed[preimage0] = 0;
-            fixed_src_elements.insert(preimage0);
-            comment(2) << preimage0 << " fixed to 0 (diagonal)" << std::endl;
+            fix_elem(first(candidates), 0);
+            comment(2) << first(candidates) << " fixed to 0 (diagonal)"
+                       << std::endl;
         }
         // prohibit non-candidates to be mapped to 0
         for (auto i = n; i--;)
@@ -410,7 +406,7 @@ void LexminSolver::run_diagonal() {
     }
 
     if (d_diag.empty()) {
-        calculate_diagonal(max_idem_reps, di_orig, fixed_src_elements);
+        calculate_diagonal(max_idem_reps, di_orig);
     } else {
         for (size_t i = 0; i < n; ++i) {
             const auto val = d_diag[i];
@@ -439,26 +435,34 @@ void LexminSolver::run_diagonal() {
         // handle the singleton case
         if (dest_corresp.size() == 1) {
             d_statistics.uniqueDiagElem->inc();
-            d_fixed[src] = first(dest_corresp);
-            fixed_src_elements.insert(src);
-            comment(2) << src << " fixed to " << d_fixed[src] << " (diag)"
-                       << std::endl;
+            if (fix_elem(src, first(dest_corresp)))
+                comment(2) << src << " fixed to " << d_fixed[src] << " (diag)"
+                           << std::endl;
         }
     }
 
-    closure_fixed(fixed_src_elements);
+    closure_fixed();
 }
 
-void LexminSolver::closure_fixed(const std::set<size_t> &fixed_src_elements) {
-    for (auto row : fixed_src_elements)
-        for (auto col : fixed_src_elements) {
+void LexminSolver::closure_fixed() {
+    for (auto row : d_fixed_src_elements)
+        for (auto col : d_fixed_src_elements) {
             const auto src_val = d_table.get(row, col);
-            if (contains(fixed_src_elements, src_val)) {
-                d_fixed_cells->set(d_fixed[row], d_fixed[col],
-                                   d_fixed[src_val]);
-                d_statistics.inferredCells->inc();
-                comment(2) << "fixed cell " << row << " " << col << std::endl;
+            assert(is_fixed(src_val) ==
+                   contains(d_fixed_src_elements, src_val));
+            if (!is_fixed(src_val)) {
+                continue;
             }
+            const auto rdst = d_fixed[row];
+            const auto cdst = d_fixed[col];
+            const auto vdst = d_fixed[src_val];
+            if (d_fixed_cells->is_set(rdst, cdst)) {
+                assert(d_fixed_cells->get(rdst, cdst) == vdst);
+                continue;
+            }
+            d_fixed_cells->set(rdst, cdst, vdst);
+            d_statistics.inferredCells->inc();
+            comment(2) << "fixed cell " << row << " " << col << std::endl;
         }
 }
 
@@ -657,11 +661,15 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
         for (size_t j = current_row + 1; j < d_table.order(); j++)
             d_sat->addClause(~d_encoding->perm(k, j));
 
-    // handled the case of unique original row
+    // handle the case of unique original row
     if (info.used == 1) {
-        d_fixed[rows.back()] = current_row;
-        comment(2) << rows.back() << " fixed to " << current_row << std::endl;
-        d_statistics.uniqueInv->inc();
+        if (fix_elem(rows.back(), current_row)) {
+            comment(2) << rows.back() << " fixed to " << current_row
+                       << std::endl;
+            d_statistics.uniqueInv->inc();
+            if (d_options.diagonal)
+                closure_fixed();
+        }
     }
 }
 
@@ -754,7 +762,7 @@ void LexminSolver::opt1stRow() {
     // handle the case of unique first row
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
-        d_fixed[maxRow] = 0;
+        fix_elem(maxRow, 0);
         d_0preimage = maxRow;
         comment(2) << *d_0preimage << " fixed to 0 (opt1stRow)" << std::endl;
     }
