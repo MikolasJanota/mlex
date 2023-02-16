@@ -532,6 +532,9 @@ void LexminSolver::solve() {
                 row_vals[col] = cur_val;
             }
 
+            if (d_fixed_cells)
+                d_fixed_cells->set(row, col, cur_val);
+
             TRACE(ccomment(3) << std::endl;);
         }
 
