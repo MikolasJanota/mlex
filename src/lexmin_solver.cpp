@@ -7,6 +7,7 @@
 #include "lexmin_solver.h"
 #include "auxiliary.h"
 #include "encoding.h"
+#include "immutable_vector.h"
 #include "invariants.h"
 #include "minisat/core/SolverTypes.h"
 #include "minisat_ext.h"
@@ -462,7 +463,8 @@ void LexminSolver::closure_fixed() {
             }
             d_fixed_cells->set(rdst, cdst, vdst);
             d_statistics.inferredCells->inc();
-            comment(2) << "fixing cell " << row << " " << col << std::endl;
+            comment(2) << "fixing (" << rdst << "," << cdst << ")=" << vdst
+                       << std::endl;
         }
 }
 
