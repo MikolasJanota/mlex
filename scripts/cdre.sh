@@ -13,21 +13,22 @@
 #
 #  The input file should also be in the current directory otherwise outputs
 #  are created in the other directory, which descriptors and expect
+set -u
 
-set -e
+MLEX_OPTS="-m"
 INPUT_FILE=$1
 echo '% print a nauty file for each model'
-./mlex -G -m $INPUT_FILE
+./mlex ${MLEX_OPTS} -G $INPUT_FILE
 echo '% run nauty on all the files'
 ls *.dre | parallel -n1 ./rd.sh 
-echo '% move outputs to a new directory'
-mkdir outs
-mv *.dre.out outs/
+OUTPUTS=outs${RANDOM}
+echo "% move outputs to a new directory ${OUTPUTS}"
+mkdir ${OUTPUTS}
+mv *.dre.out ${OUTPUTS}
 echo '% look for duplicate files'
-cd outs/
-fdupes -q -f . >out_dup
-echo '% DONE'
-DUPS=`grep -vc '^$' out_dup`
-ALL=`ls *.dre.out| wc -l`
-NONISO=$((ALL-DUPS))
-echo "Getting $NONISO noniso out of $ALL"
+COUNT_ALL=`ls ${OUTPUTS}/*.dre.out | wc -l`
+let COUNT_DUPS=`grep -vc '^$' out_dup`
+fdupes -q -f ${OUTPUTS} >out_dup
+COUNT_NONISO=$((COUNT_ALL-COUNT_DUPS))
+echo "% done"
+echo "Getting ${COUNT_NONISO} noniso out of ${COUNT_ALL}."
