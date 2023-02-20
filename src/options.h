@@ -42,6 +42,7 @@ struct Options {
     bool last_solution = false;
     bool use_hash_table = false;
     bool diagonal = false;
+    bool budget_idem = false;
     size_t seq_counter_lits = 10;
     SearchType search_type = SearchType::lin_us;
     const char *comment_prefix = "#";

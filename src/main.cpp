@@ -62,6 +62,9 @@ int main(int argc, char **argv) {
         ->default_val(true);
     app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
         ->default_val(true);
+    app.add_flag("--budget-idem,!--no-budget-idem", options.budget_idem,
+                 "Budgeting distinguishing rows with idempotent and without.")
+        ->default_val(true);
     app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
     app.add_option("--diag-file", options.diag_file, "diag_file")
         ->default_val("");

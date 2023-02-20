@@ -105,8 +105,8 @@ class RowBudgets {
     }
 
     void reset_cur_row_budget() {
-        assert(d_row_budget.size() == d_table.order());
-        d_current_row_budget = d_row_budget;
+        assert(d_all_budget.size() == d_table.order());
+        d_current_row_budget = d_all_budget;
     }
 
     void reset_cols_budget() {
@@ -115,10 +115,29 @@ class RowBudgets {
     }
 
     std::vector<std::vector<size_t>> d_cols_budget;
-    std::vector<size_t> d_row_budget;
+
+    /* Currently we have 3 types of budgets for rows. Rows that contain an
+     * idempotent, rows that do not contain idempotent and all rows.
+     * The idea is that once we find out  whether the current row has or does not
+     * have an idempotent, we can refine the budget. */
+    typedef std::vector<size_t> RowBudget;
+    RowBudget d_idem_budget;
+    RowBudget d_noidem_budget;
+    RowBudget d_all_budget;
+
+    void refine_budget(bool idem) {
+        const RowBudget &newb = idem ? d_idem_budget : d_noidem_budget;
+        for (size_t i = d_current_row_budget.size(); i--;) {
+            const auto d = d_all_budget[i] - newb[i];
+            assert(d_all_budget[i] >= newb[i]);
+            assert(d_current_row_budget[i] >= d);
+            d_current_row_budget[i] -= d;
+        }
+    }
+
     std::vector<size_t> d_col_budget;
-    std::vector<size_t> d_total_budget;
     std::vector<size_t> d_current_row_budget;
+    std::vector<size_t> d_total_budget;
 
   private:
     const BinaryFunction &d_table;
@@ -507,8 +526,11 @@ void LexminSolver::solve() {
         if (d_options.simp_sat_row)
             d_sat->simplify();
 
-        if (budgeting)
+        if (budgeting) {
             d_budgets->reset_cur_row_budget();
+            if (d_options.diagonal && d_options.budget_idem)
+                d_budgets->refine_budget(d_fixed_cells->get(row, row) == row);
+        }
 
         if (d_options.invariants) {
             calc.set_row(row);
@@ -517,7 +539,6 @@ void LexminSolver::solve() {
         RowBudgeter budgeter(d_budgets.get(), !d_budgets);
         for (size_t col = 0; col < n; col++) {
             budgeter.set_col(col);
-
             d_assignments.push_back({row, col, 0});
             const auto cur_val =
                 find_value(d_assignments.back(), budgeter,
@@ -526,8 +547,11 @@ void LexminSolver::solve() {
                                : std::make_optional(get_val(row, col)));
             assert(cur_val == std::get<2>(d_assignments.back()));
 
-            if (d_budgets)
+            if (d_budgets) {
                 d_budgets->dec_budget(col, cur_val);
+                if (!d_options.diagonal && d_options.budget_idem && col == row)
+                    d_budgets->refine_budget(cur_val == row);
+            }
 
             if (d_options.invariants) {
                 calc.set_val(col, cur_val);
@@ -814,28 +838,45 @@ void LexminSolver::calculate_budgets_col() {
     }
 }
 
+struct BudgetAux {
+    BudgetAux(size_t n) : max_row_occs(0), max_row_occs_fixed(n, 0) {}
+    size_t max_row_occs; // max occurrences for non-fixed elements
+    std::vector<size_t> max_row_occs_fixed; // max occs. fixed elems
+    void update_max(bool fixed, size_t val, size_t occs) {
+        auto &mx = fixed ? max_row_occs_fixed[val] : max_row_occs;
+        mx = std::max(mx, occs);
+    }
+};
+
 void LexminSolver::calculate_budgets_row_tot() {
     const auto n = d_table.order();
-    size_t max_row_occs = 0; // max occurrences for non-fixed elements
-    std::vector<size_t> max_row_occs_fixed(n, 0); // max occs. fixed elems
-    std::vector<size_t> row_occs(n, 0);           // occs. in current row
-    std::vector<size_t> total_occs(n, 0);         // occs. in table per element
+    std::vector<size_t> total_occs(n, 0); // occs. in table per element
+    std::vector<size_t> cur_row_occs;     // occs. in current row
+    BudgetAux all(n), idems(n), noidems(n);
     for (auto row = n; row--;) {
         if (d_used[row]) // skip used rows
             continue;
 
         // update occurrences for each value in the row
-        row_occs.assign(n, 0);
+        cur_row_occs.assign(n, 0);
         for (auto col = n; col--;) {
             const auto val = d_table.get(row, col);
-            row_occs[val]++;
+            cur_row_occs[val]++;
             total_occs[val]++;
         }
+        const bool use_idem =
+            d_options.budget_idem && d_table.get(row, row) == row;
+        const bool use_nonidem = d_options.budget_idem && !use_idem;
 
         // update row occurrence maxima
         for (auto val = n; val--;) {
-            auto &mx = is_fixed(val) ? max_row_occs_fixed[val] : max_row_occs;
-            mx = std::max(mx, row_occs[val]);
+            const auto occs = cur_row_occs[val];
+            const auto fixed = is_fixed(val);
+            all.update_max(fixed, val, occs);
+            if (use_idem)
+                idems.update_max(fixed, val, occs);
+            if (use_nonidem)
+                noidems.update_max(fixed, val, occs);
         }
     }
 
@@ -846,23 +887,31 @@ void LexminSolver::calculate_budgets_row_tot() {
             max_total_occs = std::max(max_total_occs, total_occs[val]);
 
     TRACE(print_set(comment(3) << "total_occs ", total_occs) << std::endl;);
-    comment(2) << "max occ./row: " << max_row_occs << std::endl;
+    comment(2) << "max all occ./row: " << all.max_row_occs << std::endl;
+    comment(2) << "max idem occ./row: " << idems.max_row_occs << std::endl;
+    comment(2) << "max noidem occ./row: " << noidems.max_row_occs << std::endl;
     comment(2) << "max occ./tot: " << max_total_occs << std::endl;
 
     // set up budgets
-    d_budgets->d_row_budget.assign(n, max_row_occs);     // default
-    d_budgets->d_total_budget.assign(n, max_total_occs); // default
+    d_budgets->d_all_budget.assign(n, all.max_row_occs);        // default
+    d_budgets->d_idem_budget.assign(n, idems.max_row_occs);     // default
+    d_budgets->d_noidem_budget.assign(n, noidems.max_row_occs); // default
+    d_budgets->d_total_budget.assign(n, max_total_occs);        // default
     // set up budgets for fixed elements
     for (auto original_val = n; original_val--;) {
         if (!is_fixed(original_val))
             continue;
         const auto image = d_fixed[original_val];
-        d_budgets->d_row_budget[image] = max_row_occs_fixed[original_val];
+        d_budgets->d_all_budget[image] = all.max_row_occs_fixed[original_val];
+        d_budgets->d_idem_budget[image] =
+            idems.max_row_occs_fixed[original_val];
+        d_budgets->d_noidem_budget[image] =
+            noidems.max_row_occs_fixed[original_val];
         d_budgets->d_total_budget[image] = total_occs[original_val];
-        comment(2) << "max occ./row for " << image << ": "
-                   << d_budgets->d_row_budget[image] << std::endl;
-        comment(2) << "max occ./tot for " << image << ": "
-                   << d_budgets->d_total_budget[image] << std::endl;
+        /* comment(2) << "max occ./row for " << image << ": " */
+        /*            << d_budgets->d_row_budget[image] << std::endl; */
+        /* comment(2) << "max occ./tot for " << image << ": " */
+        /*            << d_budgets->d_total_budget[image] << std::endl; */
     }
 }
 
