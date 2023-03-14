@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "immutable_vector.h"
+#include "options.h"
 #include <cassert>
 #include <cstddef>
 #include <list>

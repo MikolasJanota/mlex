@@ -11,6 +11,7 @@
 #include "invariants.h"
 #include "minisat/core/SolverTypes.h"
 #include "minisat_ext.h"
+#include "options.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -163,7 +164,7 @@ class RowBudgeter : public IBudget {
 LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
     : d_output(output), d_options(output.d_options),
       d_statistics(output.d_statistics), d_table(table),
-      d_invariants(output, table) {}
+      d_fixed(output, table.order()), d_invariants(output, table) {}
 
 LexminSolver::~LexminSolver() {}
 
@@ -344,14 +345,14 @@ LexminSolver::find_value_unsat_sat(Encoding::Assignment &asg, IBudget &budget,
 void LexminSolver::calculate_diagonal(size_t max_idem_reps,
                                       const DiagInvariants &di_orig) {
     using std::max;
-    assert(d_fixed_src_elements.size() <= 1); // fixed first idem
+    assert(d_fixed.fixed_count() <= 1); // fixed first idem
     const auto n = d_table.order();
 
     // statistics for non-fixed
     size_t max_reps = 0;
     size_t idem_count = 0;
     for (size_t i = n; i--;) {
-        if (contains(d_fixed_src_elements, i))
+        if (d_fixed.is_fixed_src(i))
             continue;
         max_reps = max(max_reps, di_orig.get_reps(i));
         if (d_table.get(i, i) == i)
@@ -415,7 +416,7 @@ void LexminSolver::run_diagonal() {
                 candidates.insert(i);
         if (candidates.size() == 1) { // top left corner fixed
             d_statistics.uniqueDiag1Elem->inc();
-            fix_elem(first(candidates), 0);
+            d_fixed.set(first(candidates), 0);
             comment(2) << first(candidates) << " fixed to 0 (diagonal)"
                        << std::endl;
         }
@@ -455,9 +456,9 @@ void LexminSolver::run_diagonal() {
         // handle the singleton case
         if (dest_corresp.size() == 1) {
             d_statistics.uniqueDiagElem->inc();
-            if (fix_elem(src, first(dest_corresp)))
-                comment(2) << src << " fixed to " << d_fixed[src] << " (diag)"
-                           << std::endl;
+            if (d_fixed.set(src, first(dest_corresp)))
+                comment(2) << src << " fixed to " << d_fixed.src2dst(src)
+                           << " (diag)" << std::endl;
         }
     }
 
@@ -465,17 +466,15 @@ void LexminSolver::run_diagonal() {
 }
 
 void LexminSolver::closure_fixed() {
-    for (auto row : d_fixed_src_elements)
-        for (auto col : d_fixed_src_elements) {
+    for (auto row : d_fixed.fixed_src_elements())
+        for (auto col : d_fixed.fixed_src_elements()) {
             const auto src_val = d_table.get(row, col);
-            assert(is_fixed(src_val) ==
-                   contains(d_fixed_src_elements, src_val));
-            if (!is_fixed(src_val)) {
+            if (!d_fixed.is_fixed_src(src_val)) {
                 continue;
             }
-            const auto rdst = d_fixed[row];
-            const auto cdst = d_fixed[col];
-            const auto vdst = d_fixed[src_val];
+            const auto rdst = d_fixed.src2dst(row);
+            const auto cdst = d_fixed.src2dst(col);
+            const auto vdst = d_fixed.src2dst(src_val);
             if (d_fixed_cells->is_set(rdst, cdst)) {
                 assert(d_fixed_cells->get(rdst, cdst) == vdst);
                 continue;
@@ -490,7 +489,6 @@ void LexminSolver::closure_fixed() {
 void LexminSolver::solve() {
     const auto n = d_table.order();
     const auto budgeting = d_options.budgeting;
-    d_fixed.resize(n, n);
     d_used.resize(n, false);
 
     if (d_options.invariants)
@@ -523,6 +521,8 @@ void LexminSolver::solve() {
     for (size_t row = 0; row < n; row++) {
         comment(2) << "row:" << row << " "
                    << SHOW_TIME(read_cpu_time() - start_time) << std::endl;
+
+        const auto fixed_before = d_fixed.fixed_count();
 
         if (d_options.simp_sat_row)
             d_sat->simplify();
@@ -576,12 +576,16 @@ void LexminSolver::solve() {
         if (row == 0 && d_0preimage) {
             d_used[*d_0preimage] = true; // mark preimage of first row as used
             update_budgets = true;
-            if (id_row_elements(row, *d_0preimage) > 0)
-                closure_fixed();
         }
 
-        if (update_budgets && budgeting)
-            calculate_budgets_row_tot();
+        if (row + 1 < n) {
+            if (d_fixed.is_fixed_dst(row))
+                id_row_elements(row, d_fixed.dst2src(row));
+            if (fixed_before != d_fixed.fixed_count() && d_fixed_cells)
+                closure_fixed();
+            if (update_budgets && budgeting)
+                calculate_budgets_row_tot();
+        }
     }
     d_is_solved = true;
     if (!d_last_permutation.empty())
@@ -592,7 +596,7 @@ size_t LexminSolver::id_row_elements(size_t dst_row, size_t src_row) {
     if (!d_options.id_elements)
         return 0;
     comment(2) << "id_elements:" << dst_row << "<-" << src_row << std::endl;
-    assert(d_fixed[src_row] == dst_row);
+    assert(d_fixed.src2dst(src_row) == dst_row);
     const auto n = d_table.order();
     // process invariants in the input table
     DiagInvariants i_src(d_output, n);
@@ -620,10 +624,12 @@ size_t LexminSolver::id_row_elements(size_t dst_row, size_t src_row) {
         // handle the singleton case
         if (dst_corresp.size() == 1) {
             rv++;
-            d_statistics.uniqueDiagElem->inc();
-            if (fix_elem(src_elem, first(dst_corresp)))
-                comment(2) << src_elem << " fixed to " << d_fixed[src_elem]
-                           << " (idrow)" << std::endl;
+            if (d_fixed.set(src_elem, first(dst_corresp))) {
+                d_statistics.uniqueRowElem->inc();
+                comment(2) << src_elem << " fixed to "
+                           << d_fixed.src2dst(src_elem) << " (idrow)"
+                           << std::endl;
+            }
         }
     }
     return rv;
@@ -726,7 +732,7 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
     for (auto k : rows)
         d_used[k] = true;
 
-    TRACE(print_set(comment(3) << "used ", rows););
+    TRACE(print_set(comment(3) << "used ", rows) << std::endl;);
 
     // disable further rows to be mapped to the used ones
     for (auto k : rows)
@@ -735,16 +741,11 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
 
     // handle the case of unique original row
     if (info.used == 1) {
-        bool run_closure = false; // closure of fixed only if changed
-        if (fix_elem(rows.back(), current_row)) {
-            run_closure = d_options.diagonal || d_options.id_elements;
+        if (d_fixed.set(rows.back(), current_row)) {
             comment(2) << rows.back() << " fixed to " << current_row
                        << std::endl;
             d_statistics.uniqueInv->inc();
         }
-        run_closure |= id_row_elements(current_row, rows.back()) > 0;
-        if (run_closure)
-            closure_fixed();
     }
 }
 
@@ -837,7 +838,7 @@ void LexminSolver::opt1stRow() {
     // handle the case of unique first row
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
-        fix_elem(maxRow, 0);
+        d_fixed.set(maxRow, 0);
         d_0preimage = maxRow;
         comment(2) << *d_0preimage << " fixed to 0 (opt1stRow)" << std::endl;
     }
@@ -865,7 +866,8 @@ void LexminSolver::calculate_budgets_col() {
 
         // update occurrence maxima
         for (auto val = n; val--;) {
-            auto &mx = is_fixed(val) ? max_col_occs_fixed[val] : max_col_occs;
+            auto &mx = d_fixed.is_fixed_src(val) ? max_col_occs_fixed[val]
+                                                 : max_col_occs;
             mx = std::max(mx, col_occs[val]);
         }
     }
@@ -875,9 +877,9 @@ void LexminSolver::calculate_budgets_col() {
     // set up budgets
     d_budgets->d_col_budget.assign(n, max_col_occs); // default
     for (auto original_val = n; original_val--;) {
-        if (!is_fixed(original_val))
+        if (!d_fixed.is_fixed_src(original_val))
             continue;
-        const auto image = d_fixed[original_val];
+        const auto image = d_fixed.src2dst(original_val);
         d_budgets->d_col_budget[image] = max_col_occs_fixed[original_val];
         comment(2) << "max occ./col for " << image << ": "
                    << d_budgets->d_col_budget[image] << std::endl;
@@ -917,7 +919,7 @@ void LexminSolver::calculate_budgets_row_tot() {
         // update row occurrence maxima
         for (auto val = n; val--;) {
             const auto occs = cur_row_occs[val];
-            const auto fixed = is_fixed(val);
+            const auto fixed = d_fixed.is_fixed_src(val);
             all.update_max(fixed, val, occs);
             if (use_idem)
                 idems.update_max(fixed, val, occs);
@@ -929,7 +931,7 @@ void LexminSolver::calculate_budgets_row_tot() {
     // maximum number of total occurrences over non-fixed all elements
     size_t max_total_occs = 0;
     for (auto val = n; val--;)
-        if (!is_fixed(val))
+        if (!d_fixed.is_fixed_src(val))
             max_total_occs = std::max(max_total_occs, total_occs[val]);
 
     TRACE(print_set(comment(4) << "total_occs ", total_occs) << std::endl;);
@@ -945,9 +947,9 @@ void LexminSolver::calculate_budgets_row_tot() {
     d_budgets->d_total_budget.assign(n, max_total_occs);        // default
     // set up budgets for fixed elements
     for (auto original_val = n; original_val--;) {
-        if (!is_fixed(original_val))
+        if (!d_fixed.is_fixed_src(original_val))
             continue;
-        const auto image = d_fixed[original_val];
+        const auto image = d_fixed.src2dst(original_val);
         d_budgets->d_all_budget[image] = all.max_row_occs_fixed[original_val];
         d_budgets->d_idem_budget[image] =
             idems.max_row_occs_fixed[original_val];

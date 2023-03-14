@@ -9,6 +9,7 @@
 #include "binary_function.h" // for BinaryFunction
 #include "comp_function.h"
 #include "encoding.h"
+#include "fixed_elem_map.h"
 #include "invariants.h"
 #include "options.h"
 #include <cstddef> // for size_t
@@ -56,23 +57,11 @@ class LexminSolver {
 
     std::vector<Encoding::Assignment> d_assignments;
 
-    std::vector<size_t> d_fixed;
+    FixedElemMap d_fixed;
     std::vector<bool> d_used;
 
     /** cells already fixed in the output table **/
     std::unique_ptr<BinaryFunction> d_fixed_cells;
-
-    std::set<size_t> d_fixed_src_elements;
-
-    bool is_fixed(size_t i) const { return d_fixed[i] < d_table.order(); }
-    bool fix_elem(size_t src, size_t dst) {
-        const auto [_, success] = d_fixed_src_elements.insert(src);
-        if (success)
-            d_statistics.fixedElements->inc();
-        assert(success || d_fixed[src] == dst);
-        d_fixed[src] = dst;
-        return success;
-    }
 
     std::optional<size_t> d_0preimage;
 
