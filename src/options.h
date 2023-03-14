@@ -38,6 +38,7 @@ struct Options {
     bool opt1stRow = false;
     bool simp_sat_row = false;
     bool budgeting = false;
+    bool id_elements = false;
     bool invariants = false;
     bool last_solution = false;
     bool use_hash_table = false;

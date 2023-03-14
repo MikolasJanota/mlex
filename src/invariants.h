@@ -82,13 +82,18 @@ class DiagInvariants {
     void calculate();
     void calc_inverse();
     void set(size_t i, size_t val);
-    InvariantVector get_invariant(size_t i) const { return d_invariants[i]; }
+    InvariantVector get_invariant(size_t i) const {
+        assert(i < d_order);
+        return d_invariants[i];
+    }
 
     size_t get_reps(size_t i) const {
+        assert(i < d_order);
         return d_invariants[i][InvariantType::REPEATS];
     }
 
     size_t get_loop(size_t i) const {
+        assert(i < d_order);
         return d_invariants[i][InvariantType::LOOP];
     }
 

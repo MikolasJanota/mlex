@@ -98,6 +98,7 @@ class LexminSolver {
     void calculate_budgets_row_tot();
     void calculate_budgets_col();
     void run_diagonal();
+    size_t id_row_elements(size_t dst_row, size_t src_row);
     void closure_fixed();
     void calculate_diagonal(size_t max_idem_reps,
                             const DiagInvariants &di_orig);

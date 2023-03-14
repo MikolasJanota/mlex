@@ -118,8 +118,8 @@ class RowBudgets {
 
     /* Currently we have 3 types of budgets for rows. Rows that contain an
      * idempotent, rows that do not contain idempotent and all rows.
-     * The idea is that once we find out  whether the current row has or does not
-     * have an idempotent, we can refine the budget. */
+     * The idea is that once we find out  whether the current row has or does
+     * not have an idempotent, we can refine the budget. */
     typedef std::vector<size_t> RowBudget;
     RowBudget d_idem_budget;
     RowBudget d_noidem_budget;
@@ -493,17 +493,18 @@ void LexminSolver::solve() {
     d_fixed.resize(n, n);
     d_used.resize(n, false);
 
-    if (d_options.invariants) {
+    if (d_options.invariants)
         d_invariants.calculate();
-    }
 
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
     make_encoding();
     d_encoding->encode_bij();
 
-    if (d_options.diagonal) {
+    if (d_options.id_elements && !d_fixed_cells)
+        d_fixed_cells = std::make_unique<BinaryFunction>(n);
+
+    if (d_options.diagonal)
         run_diagonal();
-    }
 
     if (budgeting) {
         d_budgets = std::make_unique<RowBudgets>(d_table);
@@ -546,6 +547,7 @@ void LexminSolver::solve() {
                                ? std::nullopt
                                : std::make_optional(get_val(row, col)));
             assert(cur_val == std::get<2>(d_assignments.back()));
+            row_vals[col] = cur_val;
 
             if (d_budgets) {
                 d_budgets->dec_budget(col, cur_val);
@@ -553,10 +555,8 @@ void LexminSolver::solve() {
                     d_budgets->refine_budget(cur_val == row);
             }
 
-            if (d_options.invariants) {
+            if (d_options.invariants)
                 calc.set_val(col, cur_val);
-                row_vals[col] = cur_val;
-            }
 
             if (d_fixed_cells)
                 d_fixed_cells->set(row, col, cur_val);
@@ -573,9 +573,11 @@ void LexminSolver::solve() {
             update_budgets = process_invariant(calc.make_ivec(), row);
         }
 
-        if (row == 1 && d_0preimage) {
+        if (row == 0 && d_0preimage) {
             d_used[*d_0preimage] = true; // mark preimage of first row as used
             update_budgets = true;
+            if (id_row_elements(row, *d_0preimage) > 0)
+                closure_fixed();
         }
 
         if (update_budgets && budgeting)
@@ -584,6 +586,47 @@ void LexminSolver::solve() {
     d_is_solved = true;
     if (!d_last_permutation.empty())
         show_permutation(comment(2) << "perm:") << std::endl;
+}
+
+size_t LexminSolver::id_row_elements(size_t dst_row, size_t src_row) {
+    if (!d_options.id_elements)
+        return 0;
+    comment(2) << "id_elements:" << dst_row << "<-" << src_row << std::endl;
+    assert(d_fixed[src_row] == dst_row);
+    const auto n = d_table.order();
+    // process invariants in the input table
+    DiagInvariants i_src(d_output, n);
+    for (size_t col = n; col--;)
+        i_src.set(col, d_table.get(src_row, col));
+    i_src.calculate();
+
+    // calculate invariants for the destination table's diagonal
+    DiagInvariants i_dst(d_output, n);
+    for (size_t col = 0; col < n; col++)
+        i_dst.set(col, d_fixed_cells->get(dst_row, col));
+    i_dst.calculate();
+    i_dst.calc_inverse();
+
+    size_t rv = 0;
+    // identify elements based on corresponding invariants
+    for (size_t src_elem = 0; src_elem < n; src_elem++) {
+        // get elements in dst with the same invariant as src_elem
+        const auto &dst_corresp =
+            i_dst.get_elems(i_src.get_invariant(src_elem));
+        // disable permuting to nonmatching elements
+        for (size_t dst_elem = n; dst_elem--;)
+            if (!contains(dst_corresp, dst_elem))
+                d_sat->addClause(~d_encoding->perm(src_elem, dst_elem));
+        // handle the singleton case
+        if (dst_corresp.size() == 1) {
+            rv++;
+            d_statistics.uniqueDiagElem->inc();
+            if (fix_elem(src_elem, first(dst_corresp)))
+                comment(2) << src_elem << " fixed to " << d_fixed[src_elem]
+                           << " (idrow)" << std::endl;
+        }
+    }
+    return rv;
 }
 
 std::ostream &LexminSolver::show_diag(std::ostream &out) {
@@ -692,13 +735,16 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
 
     // handle the case of unique original row
     if (info.used == 1) {
+        bool run_closure = false; // closure of fixed only if changed
         if (fix_elem(rows.back(), current_row)) {
+            run_closure = d_options.diagonal || d_options.id_elements;
             comment(2) << rows.back() << " fixed to " << current_row
                        << std::endl;
             d_statistics.uniqueInv->inc();
-            if (d_options.diagonal)
-                closure_fixed();
         }
+        run_closure |= id_row_elements(current_row, rows.back()) > 0;
+        if (run_closure)
+            closure_fixed();
     }
 }
 
@@ -886,7 +932,7 @@ void LexminSolver::calculate_budgets_row_tot() {
         if (!is_fixed(val))
             max_total_occs = std::max(max_total_occs, total_occs[val]);
 
-    TRACE(print_set(comment(3) << "total_occs ", total_occs) << std::endl;);
+    TRACE(print_set(comment(4) << "total_occs ", total_occs) << std::endl;);
     comment(2) << "max all occ./row: " << all.max_row_occs << std::endl;
     comment(2) << "max idem occ./row: " << idems.max_row_occs << std::endl;
     comment(2) << "max noidem occ./row: " << noidems.max_row_occs << std::endl;
