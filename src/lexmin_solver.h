@@ -63,8 +63,6 @@ class LexminSolver {
     /** cells already fixed in the output table **/
     std::unique_ptr<BinaryFunction> d_fixed_cells;
 
-    std::optional<size_t> d_0preimage;
-
     Invariants d_invariants;
     std::unique_ptr<RowBudgets> d_budgets;
 

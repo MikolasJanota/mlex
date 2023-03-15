@@ -64,13 +64,14 @@ void DiagInvariants::calculate() {
     using vec = std::vector<size_t>;
     std::vector<vec> invs(d_order, vec{0, 0});
     Looping lc(d_output, d_diagonal);
-    for (auto i = d_order; i--;) {
+    for (auto i : d_elems) {
+        assert(invs[i].size() == InvariantType::LOOP + 1);
         invs[d_diagonal[i]]
             [InvariantType::REPEATS]++; // number of occs of element
         invs[i][InvariantType::LOOP] = lc.calc_loop(i);
     }
     d_invariants.resize(d_order);
-    for (auto i = d_order; i--;) {
+    for (auto i : d_elems) {
         d_invariants[i] = InvariantVector(invs[i]);
         TRACE(d_output.comment(3)
                   << "diag inv: " << i << ":" << d_invariants[i] << std::endl;);
@@ -79,7 +80,7 @@ void DiagInvariants::calculate() {
 
 void DiagInvariants::calc_inverse() {
     d_inv2elems = std::make_unique<inv_map>();
-    for (auto i = d_order; i--;) {
+    for (auto i : d_elems) {
         auto [it, _] = d_inv2elems->insert({d_invariants[i], Info()});
         it->second.elems.insert(i);
     }

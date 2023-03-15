@@ -80,7 +80,8 @@ int main(int argc, char **argv) {
     std::map<std::string, SearchType> map{{"lus", SearchType::lin_us},
                                           {"lsu", SearchType::lin_su},
                                           {"bin", SearchType::bin},
-                                          {"bin2", SearchType::bin2}};
+                                          {"bin2", SearchType::bin2},
+                                          {"adaptive", SearchType::adaptive}};
     // CheckedTransformer translates and checks whether the results are either
     // in one of the strings or in one of the translations already
     app.add_option("-t,--search-type", options.search_type,
@@ -93,7 +94,8 @@ int main(int argc, char **argv) {
         ->default_val(false);
     app.add_flag("-r,!--no-r", options.invariants, "Use row invariants")
         ->default_val(true);
-    app.add_flag("-e,!--no-e", options.id_elements, " Try to identify elements when a row is identified")
+    app.add_flag("-e,!--no-e", options.id_elements,
+                 " Try to identify elements when a row is identified")
         ->default_val(true);
     app.add_flag("-H,!--no-H", options.use_hash_table,
                  "Use hashtable to store unique models instead of trie")

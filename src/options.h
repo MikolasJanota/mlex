@@ -26,7 +26,7 @@ class null_out_stream : public std::ostream {
     null_out_buf buf;
 };
 
-enum SearchType { lin_us, lin_su, bin, bin2 };
+enum SearchType { lin_us, lin_su, bin, bin2, adaptive };
 
 struct Options {
     std::string file_name;

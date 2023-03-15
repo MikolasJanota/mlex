@@ -170,8 +170,9 @@ LexminSolver::~LexminSolver() {}
 
 size_t LexminSolver::find_value(Encoding::Assignment &asg, IBudget &budget,
                                 const std::optional<size_t> &last_val) {
+    /* const auto n = d_table.order(); */
+    auto &[row, col, val] = asg;
     if (d_fixed_cells) {
-        auto &[row, col, val] = asg;
         if (d_fixed_cells->is_set(row, col)) {
             val = d_fixed_cells->get(row, col);
             TRACE(comment(3)
@@ -180,11 +181,19 @@ size_t LexminSolver::find_value(Encoding::Assignment &asg, IBudget &budget,
         }
     }
 
-    switch (d_options.search_type) {
+    /* ? (row == 0 && col < n / 2 ? SearchType::lin_us : SearchType::bin2) */
+    const auto st = d_options.search_type == SearchType::adaptive
+                        ? (row == 0 ? SearchType::lin_us : SearchType::bin2)
+                        : d_options.search_type;
+
+    switch (st) {
     case SearchType::lin_us: return find_value_unsat_sat(asg, budget, last_val);
     case SearchType::lin_su: return find_value_sat_unsat(asg, budget, last_val);
     case SearchType::bin: return find_value_bin(asg, budget, last_val);
     case SearchType::bin2: return find_value_bin2(asg, budget, last_val);
+    case SearchType::adaptive:
+        assert(0);
+        return find_value_bin2(asg, budget, last_val);
     }
     assert(false);
     return -1;
@@ -389,13 +398,12 @@ void LexminSolver::run_diagonal() {
     using std::max;
     const auto n = d_table.order();
 
-    if (!d_fixed_cells)
-        d_fixed_cells = std::make_unique<BinaryFunction>(n);
-
     // process invariants in the input table
     DiagInvariants di_orig(d_output, n);
-    for (size_t i = n; i--;)
+    for (size_t i = n; i--;) {
+        di_orig.add(i);
         di_orig.set(i, d_table.get(i, i));
+    }
     di_orig.calculate();
     size_t max_idem_reps = 0;  // max reps of an idem
     std::vector<size_t> idems; // list of idems
@@ -441,8 +449,10 @@ void LexminSolver::run_diagonal() {
 
     // calculate invariants for the destination table's diagonal
     DiagInvariants di_new(d_output, n);
-    for (size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++) {
+        di_new.add(i);
         di_new.set(i, d_fixed_cells->get(i, i));
+    }
     di_new.calculate();
     di_new.calc_inverse();
 
@@ -491,15 +501,15 @@ void LexminSolver::solve() {
     const auto budgeting = d_options.budgeting;
     d_used.resize(n, false);
 
+    if (d_options.diagonal || d_options.opt1stRow || d_options.id_elements)
+        d_fixed_cells = std::make_unique<BinaryFunction>(n);
+
     if (d_options.invariants)
         d_invariants.calculate();
 
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
     make_encoding();
     d_encoding->encode_bij();
-
-    if (d_options.id_elements && !d_fixed_cells)
-        d_fixed_cells = std::make_unique<BinaryFunction>(n);
 
     if (d_options.diagonal)
         run_diagonal();
@@ -573,8 +583,8 @@ void LexminSolver::solve() {
             update_budgets = process_invariant(calc.make_ivec(), row);
         }
 
-        if (row == 0 && d_0preimage) {
-            d_used[*d_0preimage] = true; // mark preimage of first row as used
+        if (row == 0 && d_fixed.is_fixed_dst(0)) {
+            d_used[d_fixed.dst2src(0)] = true; // mark preimage of row 0 as used
             update_budgets = true;
         }
 
@@ -598,25 +608,34 @@ size_t LexminSolver::id_row_elements(size_t dst_row, size_t src_row) {
     comment(2) << "id_elements:" << dst_row << "<-" << src_row << std::endl;
     assert(d_fixed.src2dst(src_row) == dst_row);
     const auto n = d_table.order();
-    // process invariants in the input table
-    DiagInvariants i_src(d_output, n);
-    for (size_t col = n; col--;)
-        i_src.set(col, d_table.get(src_row, col));
-    i_src.calculate();
+    // calculate invariants in the source table's row
+    DiagInvariants inv_src(d_output, n);
+    for (auto col = n; col--;) {
+        if (!d_fixed.is_fixed_src(col))
+            inv_src.add(col);
+        inv_src.set(col, d_table.get(src_row, col));
+    }
 
-    // calculate invariants for the destination table's diagonal
-    DiagInvariants i_dst(d_output, n);
-    for (size_t col = 0; col < n; col++)
-        i_dst.set(col, d_fixed_cells->get(dst_row, col));
-    i_dst.calculate();
-    i_dst.calc_inverse();
+    if (inv_src.elems().empty())
+        return 0; // everything already fixed
+    inv_src.calculate();
+
+    // calculate invariants in the destination table's row
+    DiagInvariants inv_dst(d_output, n);
+    for (auto col = n; col--;) {
+        if (!d_fixed.is_fixed_dst(col))
+            inv_dst.add(col);
+        inv_dst.set(col, d_fixed_cells->get(dst_row, col));
+    }
+    inv_dst.calculate();
+    inv_dst.calc_inverse();
 
     size_t rv = 0;
     // identify elements based on corresponding invariants
-    for (size_t src_elem = 0; src_elem < n; src_elem++) {
+    for (size_t src_elem : inv_src.elems()) {
         // get elements in dst with the same invariant as src_elem
         const auto &dst_corresp =
-            i_dst.get_elems(i_src.get_invariant(src_elem));
+            inv_dst.get_elems(inv_src.get_invariant(src_elem));
         // disable permuting to nonmatching elements
         for (size_t dst_elem = n; dst_elem--;)
             if (!contains(dst_corresp, dst_elem))
@@ -642,6 +661,7 @@ std::ostream &LexminSolver::show_diag(std::ostream &out) {
         out << (i ? ", " : " ") << d_fixed_cells->get(i, i);
     return out << ']';
 }
+
 std::ostream &LexminSolver::show_permutation(std::ostream &out) {
     const auto n = d_table.order();
     std::vector<bool> visit(n, true);
@@ -815,32 +835,31 @@ void LexminSolver::opt1stRow() {
 
     assert(max_repeats > 0);
 
-    // identify a rows that can be first
-    std::vector<bool> can_be_first(n, false);
-    for (const auto row : idems)
-        can_be_first[row] = repeats[row] == max_repeats;
+    for (size_t i = 0; i < max_repeats; i++) {
+        d_fixed_cells->set(0, i, 0);
+        d_encoding->encode_pos({0, i, 0}, SATSPC::lit_Undef);
+    }
 
-    // process rows that can be first
-    size_t maxRow = -1;
+    size_t some_first_row = -1; // some row can be 1st
     size_t count_can_be_first = 0;
     for (auto row = n; row--;) {
-        if (can_be_first[row]) {
+        const bool can_be_first = repeats[row] == max_repeats;
+        if (can_be_first) {
             count_can_be_first++;
-            maxRow = row;
+            some_first_row = row;
         } else {
             d_sat->addClause(~d_encoding->perm(row, 0));
         }
     }
 
-    assert(count_can_be_first);
+    assert(count_can_be_first > 0);
     comment(3) << "count_can_be_first " << count_can_be_first << std::endl;
 
     // handle the case of unique first row
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
-        d_fixed.set(maxRow, 0);
-        d_0preimage = maxRow;
-        comment(2) << *d_0preimage << " fixed to 0 (opt1stRow)" << std::endl;
+        d_fixed.set(some_first_row, 0);
+        comment(2) << some_first_row << " fixed to 0 (opt1stRow)" << std::endl;
     }
 }
 

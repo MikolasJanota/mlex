@@ -5,6 +5,7 @@
  * Copyright (C) 2023, Mikolas Janota
  */
 #pragma once
+#include "auxiliary.h"
 #include "immutable_vector.h"
 #include "options.h"
 #include <cassert>
@@ -13,6 +14,7 @@
 #include <memory> // for unique_ptr
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility> // for pair
 #include <vector>
 
@@ -83,18 +85,24 @@ class DiagInvariants {
     void calculate();
     void calc_inverse();
     void set(size_t i, size_t val);
-    InvariantVector get_invariant(size_t i) const {
+
+    void add(size_t i) {
         assert(i < d_order);
+        d_elems.insert(i);
+    }
+
+    InvariantVector get_invariant(size_t i) const {
+        assert(contains(d_elems, i));
         return d_invariants[i];
     }
 
     size_t get_reps(size_t i) const {
-        assert(i < d_order);
+        assert(contains(d_elems, i));
         return d_invariants[i][InvariantType::REPEATS];
     }
 
     size_t get_loop(size_t i) const {
-        assert(i < d_order);
+        assert(contains(d_elems, i));
         return d_invariants[i][InvariantType::LOOP];
     }
 
@@ -102,10 +110,13 @@ class DiagInvariants {
         return d_inv2elems->at(inv).elems;
     }
 
+    const std::unordered_set<size_t> &elems() const { return d_elems; }
+
   private:
     Output &d_output;
     const size_t d_order;
     std::vector<size_t> d_diagonal;
+    std::unordered_set<size_t> d_elems;
     std::vector<InvariantVector> d_invariants;
     using inv_map =
         std::unordered_map<InvariantVector, Info, ImmutableVector_hash<size_t>,
