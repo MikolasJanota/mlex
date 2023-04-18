@@ -7,11 +7,13 @@
 #
 
 set -e
-mkdir -p contrib
-cd contrib
 mkdir minisat 
 cd minisat 
+MDIR=`pwd`
 git clone https://github.com/agurfinkel/minisat.git
 cd minisat 
-make config prefix=..
-make -j4 install
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${MDIR} ..
+make -j4
+make install

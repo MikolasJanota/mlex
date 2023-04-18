@@ -47,7 +47,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
  
-include_directories(contrib/cadical)
 include_directories(contrib/minisat/include)
 include_directories(src)
 
@@ -59,6 +58,7 @@ add_executable(${CMAKE_PROJECT_NAME} ${CPPSOURCES} ${CSOURCES} ${GENERATED_SOURC
 
 if (USE_CADICAL)
   message(STATUS "Using cadical")
+  include_directories(contrib/cadical)
   add_library(cadical STATIC IMPORTED GLOBAL)
   target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE USE_IPASIR=1)
   target_link_libraries(${CMAKE_PROJECT_NAME} PUBLIC cadical)
