@@ -24,7 +24,7 @@ class ReadGAP {
     }
 
   private:
-    Output &d_output;
+    [[maybe_unused]] Output &d_output;
     gzFile &d_input_file;
     StreamBuffer d_in;
     bool d_open = false;

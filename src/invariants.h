@@ -160,7 +160,7 @@ class Looping {
     size_t calc_loop(size_t query_ix);
 
   private:
-    Output &d_output;
+    [[maybe_unused]] Output &d_output;
     const size_t d_order;
     const std::vector<size_t> &d_fun;
     std::vector<size_t> d_value;
