@@ -14,6 +14,7 @@ class StatisticsManager {
   public:
     StatisticsManager() {
         all.push_back(producedModels = new IntStatistic("produced models"));
+        all.push_back(satLogged = new IntStatistic("logged SAT calls"));
         all.push_back(readModels = new IntStatistic("read models"));
         all.push_back(unique1stRow = new IntStatistic("unique 1st row"));
         all.push_back(fixedElements = new IntStatistic("fixed elements"));
@@ -83,6 +84,7 @@ class StatisticsManager {
     IntStatistic *uniqueDiag1Elem;
     IntStatistic *uniqueInv;
     IntStatistic *producedModels;
+    IntStatistic *satLogged;
     IntStatistic *readModels;
     DoubleStatistic *satTime;
     DoubleStatistic *readingTime;

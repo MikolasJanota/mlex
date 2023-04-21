@@ -1022,6 +1022,7 @@ int lit2int(const Minisat::Lit &l) {
 
 void LexminSolver::write_query(double duration) {
     static int counter = 0;
+    d_statistics.satLogged->inc();
     counter++;
     std::stringstream sts;
     const auto filename = std::filesystem::path(d_options.file_name).filename();
