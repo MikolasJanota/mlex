@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstddef>
 #include <list>
+#include <limits>
 #include <memory> // for unique_ptr
 #include <set>
 #include <unordered_map>
