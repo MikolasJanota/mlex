@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -1023,8 +1024,8 @@ void LexminSolver::write_query(double duration) {
     static int counter = 0;
     counter++;
     std::stringstream sts;
-    sts << d_options.log_folder << "/" << d_options.file_name << "_" << counter
-        << ".cnf";
+    const auto filename = std::filesystem::path(d_options.file_name).filename();
+    sts << d_options.log_folder << "/" << filename << "_" << counter << ".cnf";
     std::ofstream out(sts.str());
 
     const auto &cls = d_sat->get_clauses();
