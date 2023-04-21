@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+set -u
 
 usage () {
 cat <<EOF
@@ -68,3 +70,4 @@ fi
 mkdir -p build
 cd build
 cmake $CMKFLAGS ..
+msg "all seems in order, now do 'cd build && make'"
