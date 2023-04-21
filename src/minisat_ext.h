@@ -5,10 +5,11 @@
  * Created on November 29, 2010, 5:40 PM
  */
 #pragma once
-#define LOGIPASIR(code)                                                        \
-    do {                                                                       \
-        /* code */                                                             \
-    } while (0)
+#define LOGIPASIR(code)
+/* #define LOGIPASIR(code) \ */
+/*     do { \ */
+/*         code \ */
+/*     } while (0) */
 
 #if USE_IPASIR
 #include "ipasir_wrap.h"

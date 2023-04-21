@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <tuple> // for get
@@ -776,7 +777,12 @@ bool LexminSolver::test_sat(const std::pair<size_t, size_t> &cell,
     Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
     const auto &selector = assumps[0];
     d_encoding->encode_shot(cell, vals, selector);
+    const auto t0 = read_cpu_time();
     const auto rv = d_sat->solve(assumps);
+    const auto dur = read_cpu_time() - t0;
+    if (dur > d_options.minimal_sat_duration) {
+        write_query(dur);
+    }
 
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
@@ -790,6 +796,7 @@ bool LexminSolver::test_sat(const std::pair<size_t, size_t> &cell,
     /*                   << SHOW_TIME(read_cpu_time() - start_time);); */
     return rv;
 }
+
 bool LexminSolver::test_sat(const Encoding::Assignment &asg) {
     const auto start_time = read_cpu_time();
     const auto rv = test_sat_inc(asg);
@@ -867,7 +874,12 @@ bool LexminSolver::test_sat_inc(const Encoding::Assignment &asg) {
     Minisat::vec<Minisat::Lit> assumps(1, mkLit(d_sat->fresh()));
     const auto &selector = assumps[0];
     d_encoding->encode_pos(asg, selector);
+    const auto start_time = read_cpu_time();
     const auto res = d_sat->solve(assumps);
+    const auto dur = read_cpu_time() - start_time;
+    if (dur > d_options.minimal_sat_duration) {
+        write_query(dur);
+    }
     d_sat->addClause(res ? selector : ~selector);
     return res;
 }
@@ -1001,4 +1013,30 @@ CompFunction LexminSolver::make_solution_comp() {
         pos++;
     }
     return b.make();
+}
+int lit2int(const Minisat::Lit &l) {
+    const int v = Minisat::var(l);
+    return Minisat::sign(l) ? -v : v;
+}
+
+void LexminSolver::write_query(double duration) {
+    static int counter = 0;
+    counter++;
+    std::stringstream sts;
+    sts << d_options.log_folder << "/" << d_options.file_name << "_" << counter
+        << ".cnf";
+    std::ofstream out(sts.str());
+
+    const auto &cls = d_sat->get_clauses();
+    const auto &asum = d_sat->get_assumptions();
+    out << "c duration:" << duration << std::endl;
+    out << "p cnf " << d_sat->nVars() << " " << (cls.size() + asum.size())
+        << std::endl;
+    for (int i = 0; i < asum.size(); i++)
+        out << lit2int(asum[i]) << " 0\n";
+    for (const auto &c : cls) {
+        for (const auto l : c)
+            out << lit2int(l) << ' ';
+        out << "0\n";
+    }
 }

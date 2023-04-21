@@ -48,6 +48,8 @@ struct Options {
     SearchType search_type = SearchType::lin_us;
     const char *comment_prefix = "#";
     std::string diag_file;
+    std::string log_folder;
+    double minimal_sat_duration = 1.0;
 };
 
 class Output {

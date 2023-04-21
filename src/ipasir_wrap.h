@@ -124,6 +124,12 @@ class MiniSatExt {
             output << var(p);
         return output;
     }
+    const std::vector<std::vector<Minisat::Lit>> &get_clauses() const {
+        return _clauses;
+    }
+    const Minisat::vec<Minisat::Lit> &get_assumptions() const {
+        return _assumps;
+    }
 
   private:
     /* const int           _verb = 1; */
@@ -133,11 +139,18 @@ class MiniSatExt {
     Minisat::vec<Minisat::Lit> _assumps;
     Minisat::LSet _conflict;
     Minisat::vec<Minisat::lbool> _model;
+
+    size_t _current_clause_index = 0;
+    std::vector<std::vector<Minisat::Lit>> _clauses;
+
     inline int lit2val(const Minisat::Lit &p) {
         return Minisat::sign(p) ? -Minisat::var(p) : Minisat::var(p);
     }
 
     inline void add(const Minisat::Lit &p) {
+        if (_current_clause_index >= _clauses.size())
+            _clauses.resize(_current_clause_index + 1);
+        _clauses.back().push_back(p);
         LOGIPASIR(print_literal(std::cerr, p) << " ";);
         ipasir_add(_s, lit2val(p));
     }
@@ -145,6 +158,7 @@ class MiniSatExt {
     inline bool f() {
         LOGIPASIR(std::cerr << "0\n";);
         ipasir_add(_s, 0);
+        _current_clause_index++;
         return true;
     }
 };

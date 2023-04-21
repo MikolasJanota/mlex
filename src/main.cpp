@@ -111,6 +111,12 @@ int main(int argc, char **argv) {
     app.add_flag("--simp_sat_row,!--no-simp_sat_row", options.simp_sat_row,
                  "Simplify SAT solver each row (minisat)")
         ->default_val(false);
+    app.add_option("--log-folder", options.log_folder,
+                   "folder to store SAT instances")
+        ->default_val(".");
+    app.add_option("--log-duration", options.minimal_sat_duration,
+                   "minimal SAT call duration in order to be logged")
+        ->default_val("1.0");
 
     CLI11_PARSE(app, argc, argv);
     options.comment_prefix = options.mace_format ? "%" : "#";
