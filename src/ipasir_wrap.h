@@ -193,10 +193,12 @@ class MiniSatExt {
 };
 
 inline bool MiniSatExt::solve(const Minisat::vec<Minisat::Lit> &assumps) {
+    _assumps.clear();
     for (int i = 0; i < assumps.size(); ++i) {
         LOGIPASIR(print_literal(std::cerr << "Assumption:", assumps[i])
                       << '\n';);
         ipasir_assume(_s, lit2val(assumps[i]));
+        _assumps.push(assumps[i]);
     }
     const auto rv = solve();
     if (!rv) {

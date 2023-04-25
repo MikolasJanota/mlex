@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <tuple> // for get
@@ -782,7 +783,7 @@ bool LexminSolver::test_sat(const std::pair<size_t, size_t> &cell,
     const auto rv = d_sat->solve(assumps);
     const auto dur = read_cpu_time() - t0;
     if (dur > d_options.minimal_sat_duration) {
-        write_query(dur);
+        write_query(dur, rv);
     }
 
     d_statistics.satTime->inc(read_cpu_time() - start_time);
@@ -879,7 +880,7 @@ bool LexminSolver::test_sat_inc(const Encoding::Assignment &asg) {
     const auto res = d_sat->solve(assumps);
     const auto dur = read_cpu_time() - start_time;
     if (dur > d_options.minimal_sat_duration) {
-        write_query(dur);
+        write_query(dur, res);
     }
     d_sat->addClause(res ? selector : ~selector);
     return res;
@@ -1020,13 +1021,15 @@ int lit2int(const Minisat::Lit &l) {
     return Minisat::sign(l) ? -v : v;
 }
 
-void LexminSolver::write_query(double duration) {
+void LexminSolver::write_query(double duration, bool rv) {
     static int counter = 0;
     d_statistics.satLogged->inc();
     counter++;
     std::stringstream sts;
-    const auto filename = std::filesystem::path(d_options.file_name).filename().string();
-    sts << d_options.log_folder << "/" << filename << "_" << counter << ".cnf";
+    const auto filename =
+        std::filesystem::path(d_options.file_name).filename().string();
+    sts << d_options.log_folder << "/" << filename << "_" << std::setfill('0')
+        << std::setw(5) << counter << "_" << (rv ? 's' : 'u') << ".cnf";
     std::ofstream out(sts.str());
 
     const auto &cls = d_sat->get_clauses();
