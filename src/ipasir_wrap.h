@@ -124,6 +124,34 @@ class MiniSatExt {
             output << var(p);
         return output;
     }
+
+    void propagate_unit() {
+        if (_current_clause.size() != 1)
+            return;
+        const auto l = _current_clause[0];
+        for (size_t i = 0; i < _clauses.size();) {
+            auto &cl = _clauses[i];
+            bool taut = false;
+            for (size_t j = 0; j < cl.size();) {
+                if (cl[j] == l) {
+                    taut = true;
+                    break;
+                }
+                if (cl[j] == ~l) {
+                    cl[j] = cl.back();
+                    cl.pop_back();
+                } else
+                    j++;
+            }
+            if (taut) {
+                if (i + 1 != _clauses.size())
+                    _clauses[i] = std::move(_clauses.back());
+                _clauses.pop_back();
+            } else
+                i++;
+        }
+    }
+
     const std::vector<std::vector<Minisat::Lit>> &get_clauses() const {
         return _clauses;
     }
@@ -140,17 +168,15 @@ class MiniSatExt {
     Minisat::LSet _conflict;
     Minisat::vec<Minisat::lbool> _model;
 
-    size_t _current_clause_index = 0;
     std::vector<std::vector<Minisat::Lit>> _clauses;
+    std::vector<Minisat::Lit> _current_clause;
 
     inline int lit2val(const Minisat::Lit &p) {
         return Minisat::sign(p) ? -Minisat::var(p) : Minisat::var(p);
     }
 
     inline void add(const Minisat::Lit &p) {
-        if (_current_clause_index >= _clauses.size())
-            _clauses.resize(_current_clause_index + 1);
-        _clauses.back().push_back(p);
+        _current_clause.push_back(p);
         LOGIPASIR(print_literal(std::cerr, p) << " ";);
         ipasir_add(_s, lit2val(p));
     }
@@ -158,7 +184,10 @@ class MiniSatExt {
     inline bool f() {
         LOGIPASIR(std::cerr << "0\n";);
         ipasir_add(_s, 0);
-        _current_clause_index++;
+
+        propagate_unit();
+        _clauses.push_back(_current_clause);
+        _current_clause.clear();
         return true;
     }
 };
