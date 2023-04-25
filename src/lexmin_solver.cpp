@@ -1025,7 +1025,7 @@ void LexminSolver::write_query(double duration) {
     d_statistics.satLogged->inc();
     counter++;
     std::stringstream sts;
-    const auto filename = std::filesystem::path(d_options.file_name).filename();
+    const auto filename = std::filesystem::path(d_options.file_name).filename().string();
     sts << d_options.log_folder << "/" << filename << "_" << counter << ".cnf";
     std::ofstream out(sts.str());
 
