@@ -50,7 +50,7 @@ else
   CMKFLAGS="$CMKFLAGS -DUSE_CADICAL=OFF"
 fi
 
-if [[ -d "contrib/minisat" ]]; then
+if [ -d "contrib/minisat" ]; then
   msg "assuming that minisat is already set up"
 else
   msg "setting up minisat SAT solver"
