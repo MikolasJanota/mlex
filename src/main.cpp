@@ -50,29 +50,29 @@ using HT = std::set<CompFunction, CompFunction_less>;
 #endif
 
 int main(int argc, char **argv) {
-    CLI::App app("Lexicography smallest automorphic model.");
+    CLI::App app("Lexicography smallest isomorphic model.");
     Options options;
     StatisticsManager statistics;
     Output output(options, statistics);
 
-    app.add_option("file_name", options.file_name, "file name")
+    app.add_option("file_name", options.file_name, "Input file name, use - or empty for stdin.")
         ->default_val("-");
     app.add_flag("-1, !--no-1", options.opt1stRow,
-                 "Try to optimize for the first row of the table")
+                 "Try to optimize for the first row of the table.")
         ->default_val(true);
-    app.add_flag("-b,!--no-b", options.budgeting, "Budgeting")
+    app.add_flag("-b,!--no-b", options.budgeting, "Use budgeting to save SAT calls.")
         ->default_val(true);
     app.add_flag("--budget-idem,!--no-budget-idem", options.budget_idem,
                  "Budgeting distinguishing rows with idempotent and without.")
         ->default_val(true);
-    app.add_flag("-v", options.verbose, "Add verbosity")->default_val(0);
-    app.add_option("--diag-file", options.diag_file, "diag_file")
+    app.add_flag("-v", options.verbose, "Add verbosity.")->default_val(0);
+    app.add_option("--diag-file", options.diag_file, "Give precomputed diagonal file, only meaningful in the diagonal mode (-d).")
         ->default_val("");
-    app.add_flag("-G", options.graph, "Graph")->default_val(false);
-    app.add_flag("-P", options.print, "Print into files")->default_val(false);
-    app.add_flag("-m", options.mace_format, "Use mace format for input/output")
+    app.add_flag("-G", options.graph, "Print graph for a given algebra that can be input to nauty.")->default_val(false);
+    app.add_flag("-P", options.print, "Print into files.")->default_val(false);
+    app.add_flag("-m", options.mace_format, "Use MACE format for input/output.")
         ->default_val(false);
-    app.add_flag("-u", options.unique, "Output only unique models")
+    app.add_flag("-u", options.unique, "Output only unique models.")
         ->default_val(false);
 
     // adapted from
@@ -90,26 +90,26 @@ int main(int argc, char **argv) {
         ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
     ///// TODO better help message
 
-    app.add_flag("-d,!--no-d", options.diagonal, "Traverse diagonal first")
+    app.add_flag("-d,!--no-d", options.diagonal, "Traverse diagonal first.")
         ->default_val(false);
-    app.add_flag("-r,!--no-r", options.invariants, "Use row invariants")
+    app.add_flag("-r,!--no-r", options.invariants, "Use row invariants.")
         ->default_val(true);
     app.add_flag("-e,!--no-e", options.id_elements,
-                 " Try to identify elements when a row is identified")
+                 "Try to identify elements when a row is identified.")
         ->default_val(true);
     app.add_flag("-H,!--no-H", options.use_hash_table,
-                 "Use hashtable to store unique models instead of trie")
+                 "Use hashtable to store unique models instead of trie.")
         ->default_val(true);
     app.add_flag(
            "-l,!--no-l", options.last_solution,
-           "Check last solution to see that this value is already possible")
+           "Check last solution to see that this value is already possible.")
         ->default_val(true);
     app.add_option(
            "--seq-counter-lits", options.seq_counter_lits,
-           "Number of literals when to switch to seq counter enc for at most 1")
+           "Number of literals when to switch to seq counter enc for at most 1.")
         ->default_val(10);
     app.add_flag("--simp_sat_row,!--no-simp_sat_row", options.simp_sat_row,
-                 "Simplify SAT solver each row (minisat)")
+                 "Force minisat's simplify on each row.")
         ->default_val(false);
 
     CLI11_PARSE(app, argc, argv);
@@ -142,7 +142,6 @@ int main(int argc, char **argv) {
     if (!options.diag_file.empty() && !options.diagonal) {
         cerr << "ERROR! diagonal file only makes sense in the diagonal mode"
              << endl;
-        ;
         exit(EXIT_FAILURE);
     }
 
