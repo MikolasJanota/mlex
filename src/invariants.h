@@ -11,6 +11,7 @@
 #include <cassert>
 #include <cstddef>
 #include <list>
+#include <limits>
 #include <memory> // for unique_ptr
 #include <set>
 #include <unordered_map>
@@ -160,7 +161,7 @@ class Looping {
     size_t calc_loop(size_t query_ix);
 
   private:
-    [[maybe_unused]] Output &d_output;
+    Output &d_output;
     const size_t d_order;
     const std::vector<size_t> &d_fun;
     std::vector<size_t> d_value;
