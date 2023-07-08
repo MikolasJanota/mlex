@@ -10,7 +10,9 @@ and prepare the `build` folder.
 Run `./configure -h`  to see options for building  (for instance the switch to cadical).
 
 In a nutshell, it should be enough to do:
+```
      ./configure && cd build && make
+```
 
 # usage
 
