@@ -50,6 +50,10 @@ static void match_char(StreamBuffer &sb, char c) {
     const char rc = *sb;
     if (rc != c) {
         std::cerr << c << " expected instead of '" << rc << "'" << std::endl;
+        std::cerr << "around: \"";
+        for (size_t i = 0; i < 40; i++, ++sb)
+            std::cerr << static_cast<char>(*sb);
+        std::cerr << "\"" << std::endl;
         exit(EXIT_FAILURE);
     }
     ++sb;
@@ -106,8 +110,9 @@ size_t ReadMace::read(int max) {
             for (size_t j = 0; j < order; j++) {
                 const auto val = parseInt(d_in);
                 if (val < 0 || val >= static_cast<int>(order)) {
-                  std::cerr << "value '" << val << "' out of range" << std::endl;
-                  exit(EXIT_FAILURE);
+                    std::cerr << "value '" << val << "' out of range"
+                              << std::endl;
+                    exit(EXIT_FAILURE);
                 }
                 f->set(i, j, val);
                 if (i + 1 < order || j + 1 < order)
