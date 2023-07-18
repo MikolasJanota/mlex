@@ -28,16 +28,23 @@ class LexminSolver {
   public:
     LexminSolver(Output &output, const BinaryFunction &table);
     virtual ~LexminSolver();
+
+    /* Run the solver */
     void solve();
 
+    /* Make solution as compact BinaryFunction */
     BinaryFunction *make_solution();
+
+    /* Make solution as compact fun representation */
     CompFunction make_solution_comp();
 
+    /* Only if d_options.diagonal */
     void set_diag(const std::vector<size_t> &diag) {
         assert(diag.size() == d_table.order());
         d_diag = diag;
     }
 
+    /* Only if d_options.diagonal */
     void set_diag_(std::vector<size_t> &diag) {
         assert(diag.size() == d_table.order());
         d_diag = std::move(diag);

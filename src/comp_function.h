@@ -22,6 +22,7 @@ inline size_t calculate_bits_needed(size_t order) {
     return rv;
 }
 
+/* Calculate how many values fit in 64-bits. */
 inline size_t calculate_fits(size_t order) {
     assert(order > 1);
     return std::numeric_limits<uint64_t>::digits / calculate_bits_needed(order);
@@ -42,6 +43,8 @@ inline size_t calculate_data_size(size_t order, size_t arity) {
     return 1 + (sz - 1) / f;
 }
 
+/*A representation of a multiplication table that's meant to occupy little
+ * space. Multiple values are masked into 64bits.*/
 class CompFunction {
   public:
     CompFunction(size_t order, size_t arity, size_t data_size, uint64_t *data)
@@ -108,6 +111,7 @@ class CompFunction {
     }
 };
 
+/* Reads values sequentially from compact representation. */
 class CompFunctionReader {
   public:
     CompFunctionReader(const CompFunction &f)
@@ -140,6 +144,7 @@ class CompFunctionReader {
     size_t d_bits = -1, d_fits = -1;
 };
 
+/* Helper to build a compact representation. */
 class CompFunctionBuilder {
   public:
     CompFunctionBuilder(size_t order, size_t arity)
@@ -155,6 +160,7 @@ class CompFunctionBuilder {
             delete[] d_data;
     }
 
+    /* Create a compact function based on whatever has been pushed so far. */
     CompFunction make() {
         if (!d_buf.empty())
             flush();
@@ -163,6 +169,7 @@ class CompFunctionBuilder {
         return rv;
     }
 
+    /* Prepare for a new function. */
     void reset() {
         assert(d_buf.empty());
         d_pos = 0;
@@ -171,6 +178,7 @@ class CompFunctionBuilder {
             d_data = new uint64_t[d_data_size];
     }
 
+    /* Push value into the table. */
     void push(size_t v) {
         assert(v < d_order);
         d_buf.push_back(v);
