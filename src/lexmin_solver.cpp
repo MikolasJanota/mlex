@@ -162,8 +162,7 @@ class RowBudgeter : public IBudget {
 };
 
 LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
-    : d_output(output), d_options(output.d_options),
-      d_statistics(output.d_statistics), d_table(table),
+    : LexminSolverBase(output, table),
       d_fixed(output, table.order()), d_invariants(output, table) {}
 
 LexminSolver::~LexminSolver() {}

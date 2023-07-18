@@ -26,6 +26,11 @@ class BinaryFunction {
         _values[ix(i, j)] = val;
     }
 
+    void set(const BinaryFunction &o) {
+        assert(o._order == _order);
+        _values = o._values;
+    }
+
     bool is_set(size_t i, size_t j) const { return _values[ix(i, j)] < _order; }
 
     size_t get(size_t i, size_t j) const {

@@ -33,6 +33,7 @@ struct Options {
     int verbose = 0;
     bool print = false;
     bool graph = false;
+    bool explicit_solver = false;
     bool mace_format = false;
     bool unique = false;
     bool opt1stRow = false;

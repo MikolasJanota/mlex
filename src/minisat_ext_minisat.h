@@ -26,6 +26,12 @@ std::ostream &operator<<(std::ostream &outs, Lit lit);
 
 class MiniSatExt {
   public:
+    MiniSatExt() {
+        _true_lit = mkLit(fresh());
+#ifdef USE_MINISATSIMP
+        setFrozen(var(_true_lit), true);
+#endif
+    }
     inline const Minisat::LSet &conflict() { return _solver.conflict; }
     inline const Minisat::vec<Minisat::lbool> &model() { return _solver.model; }
     inline Var fresh() { return _solver.newVar(); }
@@ -64,6 +70,8 @@ class MiniSatExt {
         return _solver.addClause_(ls);
     }
 
+    inline Lit true_lit() const { return _true_lit; }
+
     inline Minisat::lbool get_model_value(Minisat::Var v) const {
         return v < _solver.model.size() ? _solver.model[v] : l_Undef;
     }
@@ -83,6 +91,7 @@ class MiniSatExt {
 #else
     Solver _solver;
 #endif
+    Minisat::Lit _true_lit;
 };
 
 inline void MiniSatExt::new_variables(Var max_id) {

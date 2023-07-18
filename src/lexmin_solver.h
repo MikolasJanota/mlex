@@ -11,6 +11,7 @@
 #include "encoding.h"
 #include "fixed_elem_map.h"
 #include "invariants.h"
+#include "lexmin_solver_base.h"
 #include "options.h"
 #include <cstddef> // for size_t
 #include <iosfwd>  // for ostream
@@ -24,22 +25,22 @@ class RowBudgets;
 class IBudget;
 class StatisticsManager;
 
-class LexminSolver {
+class LexminSolver : public LexminSolverBase {
   public:
     LexminSolver(Output &output, const BinaryFunction &table);
     virtual ~LexminSolver();
 
     /* Run the solver */
-    void solve();
+    void solve() override;
 
     /* Make solution as compact BinaryFunction */
-    BinaryFunction *make_solution();
+    BinaryFunction *make_solution() override;
 
     /* Make solution as compact fun representation */
-    CompFunction make_solution_comp();
+    CompFunction make_solution_comp() override;
 
     /* Only if d_options.diagonal */
-    void set_diag(const std::vector<size_t> &diag) {
+    void set_diag(const std::vector<size_t> &diag) override {
         assert(diag.size() == d_table.order());
         d_diag = diag;
     }
@@ -51,12 +52,6 @@ class LexminSolver {
     }
 
   private:
-    Output &d_output;
-    const Options &d_options;
-    StatisticsManager &d_statistics;
-    const BinaryFunction &d_table;
-
-    bool d_is_solved = false;
     std::vector<size_t> d_diag;
 
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
@@ -72,14 +67,6 @@ class LexminSolver {
 
     Invariants d_invariants;
     std::unique_ptr<RowBudgets> d_budgets;
-
-    inline std::ostream &comment(int level = 0) {
-        return d_output.comment(level);
-    }
-
-    inline std::ostream &ccomment(int level = 0) {
-        return d_output.ccomment(level);
-    }
 
     void make_encoding();
     bool test_sat(const Encoding::Assignment &asg);

@@ -7,7 +7,7 @@
 #pragma once
 #define LOGIPASIR(code)                                                        \
     do {                                                                       \
-        /* code */                                                             \
+        code                                                                   \
     } while (0)
 
 #if USE_IPASIR

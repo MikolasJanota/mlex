@@ -10,6 +10,8 @@
 #include "comp_function.h"   // for CompFunction, CompFunction_hash, CompFu...
 #include "graph.h"
 #include "lexmin_solver.h"
+#include "lexmin_solver_base.h"
+#include "lexmin_solver_explicit.h"
 #include "options.h"
 #include "read_diags.h"
 #include "read_gap.h"
@@ -21,6 +23,7 @@
 #include <cstddef>
 #include <cstdint> // for uint64_t
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <map>       // for map
@@ -49,26 +52,42 @@ using HT =
 using HT = std::set<CompFunction, CompFunction_less>;
 #endif
 
+LexminSolverBase *make_solver(Output &output, const BinaryFunction &table) {
+    return output.d_options.explicit_solver
+               ? static_cast<LexminSolverBase *>(
+                     new LexminSolverExplicit(output, table))
+               : static_cast<LexminSolverBase *>(
+                     new LexminSolver(output, table));
+}
+
 int main(int argc, char **argv) {
     CLI::App app("Lexicography smallest isomorphic model.");
     Options options;
     StatisticsManager statistics;
     Output output(options, statistics);
 
-    app.add_option("file_name", options.file_name, "Input file name, use - or empty for stdin.")
+    app.add_option("file_name", options.file_name,
+                   "Input file name, use - or empty for stdin.")
         ->default_val("-");
     app.add_flag("-1, !--no-1", options.opt1stRow,
                  "Try to optimize for the first row of the table.")
         ->default_val(true);
-    app.add_flag("-b,!--no-b", options.budgeting, "Use budgeting to save SAT calls.")
+    app.add_flag("-b,!--no-b", options.budgeting,
+                 "Use budgeting to save SAT calls.")
         ->default_val(true);
     app.add_flag("--budget-idem,!--no-budget-idem", options.budget_idem,
                  "Budgeting distinguishing rows with idempotent and without.")
         ->default_val(true);
     app.add_flag("-v", options.verbose, "Add verbosity.")->default_val(0);
-    app.add_option("--diag-file", options.diag_file, "Give precomputed diagonal file, only meaningful in the diagonal mode (-d).")
+    app.add_option("--diag-file", options.diag_file,
+                   "Give precomputed diagonal file, only meaningful in the "
+                   "diagonal mode (-d).")
         ->default_val("");
-    app.add_flag("-G", options.graph, "Print graph for a given algebra that can be input to nauty.")->default_val(false);
+    app.add_flag("-G", options.graph,
+                 "Print graph for a given algebra that can be input to nauty.")
+        ->default_val(false);
+    app.add_flag("-E", options.explicit_solver, "Use the explicit solver.")
+        ->default_val(false);
     app.add_flag("-P", options.print, "Print into files.")->default_val(false);
     app.add_flag("-m", options.mace_format, "Use MACE format for input/output.")
         ->default_val(false);
@@ -104,9 +123,9 @@ int main(int argc, char **argv) {
            "-l,!--no-l", options.last_solution,
            "Check last solution to see that this value is already possible.")
         ->default_val(true);
-    app.add_option(
-           "--seq-counter-lits", options.seq_counter_lits,
-           "Number of literals when to switch to seq counter enc for at most 1.")
+    app.add_option("--seq-counter-lits", options.seq_counter_lits,
+                   "Number of literals when to switch to seq counter enc for "
+                   "at most 1.")
         ->default_val(10);
     app.add_flag("--simp_sat_row,!--no-simp_sat_row", options.simp_sat_row,
                  "Force minisat's simplify on each row.")
@@ -178,7 +197,7 @@ int main(int argc, char **argv) {
 }
 
 static void process_table_plain(Output &output, const BinaryFunction &table,
-                                LexminSolver &solver) {
+                                LexminSolverBase &solver) {
     auto &statistics(output.d_statistics);
     const auto &options(output.d_options);
     statistics.producedModels->inc();
@@ -192,7 +211,7 @@ static void process_table_plain(Output &output, const BinaryFunction &table,
 }
 
 static void process_table_trie(
-    Output &output, const BinaryFunction &table, LexminSolver &solver,
+    Output &output, const BinaryFunction &table, LexminSolverBase &solver,
     std::unique_ptr<ModelTrie> &mt,
     std::vector<std::unique_ptr<BinaryFunction>> &unique_solutions) {
     std::unique_ptr<BinaryFunction> solution(solver.make_solution());
@@ -209,7 +228,8 @@ static void process_table_trie(
 }
 
 static void process_table_ht(Output &output, const BinaryFunction &table,
-                             LexminSolver &solver, std::unique_ptr<HT> &ht) {
+                             LexminSolverBase &solver,
+                             std::unique_ptr<HT> &ht) {
     auto &statistics(output.d_statistics);
     const auto &options(output.d_options);
     CompFunction sol = solver.make_solution_comp();
@@ -255,14 +275,15 @@ process_tables(Output &output,
                           << " order:" << table->order() << " "
                           << table->get_additional_info() << std::endl;
 
-        LexminSolver solver(output, *table);
-        solver.solve();
+        std::unique_ptr<LexminSolverBase> solver(make_solver(output, *table));
+        solver->solve();
         if (use_ht) {
-            process_table_ht(output, *table, solver, ht);
+            process_table_ht(output, *table, *(solver.get()), ht);
         } else if (use_trie) {
-            process_table_trie(output, *table, solver, mt, unique_solutions);
+            process_table_trie(output, *table, *(solver.get()), mt,
+                               unique_solutions);
         } else {
-            process_table_plain(output, *table, solver);
+            process_table_plain(output, *table, *(solver.get()));
         }
         counter++;
     }
@@ -375,21 +396,22 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
 
         if (options.verbose > 3)
             f.print(cout, options.comment_prefix);
-        LexminSolver solver(output, f);
+        std::unique_ptr<LexminSolverBase> solver(make_solver(output, f));
 
         if (dgs) {
-            solver.set_diag(min_diag);
+            solver->set_diag(min_diag);
         }
         output.comment(1) << "solving order:" << f.order() << " " << std::endl;
 
-        solver.solve();
+        solver->solve();
 
         if (use_ht) {
-            process_table_ht(output, f, solver, ht);
+            process_table_ht(output, f, *(solver.get()), ht);
         } else if (use_trie) {
-            process_table_trie(output, f, solver, mt, unique_solutions);
+            process_table_trie(output, f, *(solver.get()), mt,
+                               unique_solutions);
         } else {
-            process_table_plain(output, f, solver);
+            process_table_plain(output, f, *(solver.get()));
         }
         reader.clear();
         cnt++;
