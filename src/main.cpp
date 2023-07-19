@@ -198,7 +198,8 @@ int main(int argc, char **argv) {
     }
     statistics.totalTime->inc(read_cpu_time() - start_time);
     for (const auto s : statistics.all)
-        s->print(output.comment()) << std::endl;
+        if (s->should_print())
+            s->print(output.comment()) << std::endl;
     return EXIT_SUCCESS;
 }
 

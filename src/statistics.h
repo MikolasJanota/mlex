@@ -5,6 +5,7 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -24,9 +25,9 @@ class StatisticsManager {
         all.push_back(uniqueRowElem = new IntStatistic("unique row elem"));
         all.push_back(inferredCells = new IntStatistic("inferred cells"));
         all.push_back(satCalls = new IntStatistic("SAT calls"));
-        all.push_back(satTime = new DoubleStatistic("SAT time"));
-        all.push_back(readingTime = new DoubleStatistic("Reading time"));
-        all.push_back(totalTime = new DoubleStatistic("Total time"));
+        all.push_back(satTime = new TimeStatistic("SAT time"));
+        all.push_back(readingTime = new TimeStatistic("Reading time"));
+        all.push_back(totalTime = new TimeStatistic("Total time"));
     }
 
     virtual ~StatisticsManager();
@@ -38,9 +39,29 @@ class StatisticsManager {
         const std::string &name() const { return d_name; }
 
         virtual std::ostream &print(std::ostream &) = 0;
+        virtual bool should_print() const = 0;
 
       private:
         const std::string d_name;
+    };
+
+    class TimeStatistic : public Statistic {
+      public:
+        TimeStatistic(const std::string &name, double init_value = 0)
+            : Statistic{name}, d_val{init_value} {};
+
+        double inc(double ival) { return d_val += ival; }
+        double get() const { return d_val; }
+
+        virtual bool should_print() const override { return true; }
+
+        virtual std::ostream &print(std::ostream &o) override {
+            return o << name() << " : " << std::fixed << std::setprecision(3)
+                     << d_val;
+        }
+
+      private:
+        double d_val;
     };
 
     class DoubleStatistic : public Statistic {
@@ -50,6 +71,10 @@ class StatisticsManager {
 
         double inc(double ival) { return d_val += ival; }
         double get() const { return d_val; }
+
+        virtual bool should_print() const override {
+            return std::fpclassify(d_val) != FP_ZERO;
+        }
 
         virtual std::ostream &print(std::ostream &o) override {
             return o << name() << " : " << std::fixed << std::setprecision(3)
@@ -66,6 +91,8 @@ class StatisticsManager {
             : Statistic{name}, d_val{init_value} {};
         int inc() { return ++d_val; }
         int get() const { return d_val; }
+
+        virtual bool should_print() const override { return d_val != 0; }
 
         virtual std::ostream &print(std::ostream &o) override {
             return o << name() << " : " << d_val;
@@ -84,8 +111,8 @@ class StatisticsManager {
     IntStatistic *uniqueInv;
     IntStatistic *producedModels;
     IntStatistic *readModels;
-    DoubleStatistic *satTime;
-    DoubleStatistic *readingTime;
-    DoubleStatistic *totalTime;
+    TimeStatistic *satTime;
+    TimeStatistic *readingTime;
+    TimeStatistic *totalTime;
     std::vector<Statistic *> all;
 };
