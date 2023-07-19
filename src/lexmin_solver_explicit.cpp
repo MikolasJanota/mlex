@@ -58,10 +58,11 @@ void LexminSolverExplicit::solve() {
 bool LexminSolverExplicit::run_sat(Minisat::vec<Minisat::Lit> &assumps) {
     const auto start_time = read_cpu_time();
     const auto rv = d_sat->solve(assumps);
-    d_statistics.satTime->inc(read_cpu_time() - start_time);
+    const auto dur = read_cpu_time() - start_time;
+    d_statistics.satTime->inc(dur);
     d_statistics.satCalls->inc();
-    comment(3) << "sc:" << d_statistics.satCalls->get() << ":" << rv
-               << SHOW_TIME(read_cpu_time() - start_time) << '\n';
+    comment(3) << "sc:" << d_statistics.satCalls->get() << ":"
+               << (rv ? 'S' : 'U') << ":" << SHOW_TIME(dur) << '\n';
     return rv;
 }
 
