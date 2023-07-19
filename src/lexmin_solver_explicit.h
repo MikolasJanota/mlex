@@ -34,8 +34,12 @@ class LexminSolverExplicit : public LexminSolverBase {
         assert(false);
     }
 
+    void make_permutation(std::vector<size_t> &perm);
+
   private:
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<EncodingExplicit> d_encoding;
     BinaryFunction *d_solution = nullptr;
+    bool run_sat(Minisat::vec<Minisat::Lit> &assumps);
+    void opt1stRow();
 };

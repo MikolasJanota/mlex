@@ -95,3 +95,5 @@ std::ostream &print_vec(std::ostream &out, const C &m, size_t offset = 0) {
     }
     return out << "]";
 }
+
+std::ostream &show_permutation(std::ostream &out, std::vector<size_t> &perm);

@@ -156,6 +156,7 @@ inline bool MiniSatExt::solve(const Minisat::vec<Minisat::Lit> &assumps) {
         ipasir_assume(_s, lit2val(assumps[i]));
     }
     const auto rv = solve();
+    LOGIPASIR(std::cerr << "rv:" << (rv ? "SAT" : "UNSAT") << '\n';);
     if (!rv) {
         _conflict.clear();
         for (int i = 0; i < assumps.size(); ++i) {

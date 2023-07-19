@@ -43,11 +43,11 @@ SATSPC::Lit EncodingExplicit::encode_less_rec(const BinaryFunction &table,
     const auto n = d_table.order();
     if (r == n)
         return ~d_sat.true_lit();
-    const size_t nr = (c + 1 == n) ? r + 1 : r;
-    const size_t nc = (c + 1 == n) ? 0 : (c + 1);
+    const size_t nc = (c + 1) % n;
+    const size_t nr = nc == 0 ? r + 1 : r;
     const auto nl = encode_less_rec(table, nr, nc);
     const auto l = lesslit();
-    const auto v = d_table.get(r, c);
+    const auto v = table.get(r, c);
     // disable all values above the current one
     for (size_t i = v + 1; i < n; i++)
         d_sat.addClause(~l, ~val(r, c, i));
@@ -65,11 +65,17 @@ void EncodingExplicit::encode_iso() {
             for (size_t r1 = 0; r1 < n; r1++)
                 for (size_t c1 = 0; c1 < n; c1++)
                     for (size_t v1 = 0; v1 < n; v1++) {
+                        if ((r == c && r1 != c1) || (r == v && r1 != v1) ||
+                            (c == v && c1 != v1))
+                            continue;
+                        if ((r1 == c1 && r != c) || (r1 == v1 && r != v) ||
+                            (c1 == v1 && c != v))
+                            continue;
                         ls.clear();
                         ls.push(~perm(r, r1));
                         ls.push(~perm(c, c1));
                         ls.push(~perm(v, v1));
-                        ls.push(val(r, c, v1));
+                        ls.push(val(r1, c1, v1));
                         d_sat.addClause_(ls);
                     }
         }

@@ -52,7 +52,7 @@ class EncodingExplicit {
 
     inline void atm1(SATSPC::MiniSatExt &sat,
                      const std::vector<SATSPC::Lit> &literals) {
-        LOGIPASIR(std::cout << "atm1 { ";
+        LOGIPASIR(std::cout << "c atm1 { ";
                   for (const auto &literal
                        : literals) sat.print_literal(std::cout, literal)
                   << " ";
@@ -64,7 +64,7 @@ class EncodingExplicit {
         } else {
             SeqCounter(sat, literals, 1).encode();
         }
-        LOGIPASIR(std::cout << "end atm1" << std::endl;);
+        LOGIPASIR(std::cout << "c end atm1" << std::endl;);
     }
 
     inline void eq1(SATSPC::MiniSatExt &sat,
@@ -93,7 +93,7 @@ class EncodingExplicit {
         lit = SATSPC::mkLit(d_sat.fresh());
 #else
         std::stringstream sts;
-        sts << "v_" << r << "_" << c << "_" << v;
+        sts << "[" << r << "," << c << "]=" << v;
         lit = get_representative(sts.str());
 #endif
         return lit;
@@ -108,7 +108,7 @@ class EncodingExplicit {
         row[rng] = SATSPC::mkLit(d_sat.fresh());
 #else
         std::stringstream sts;
-        sts << "p_" << dom << "_" << rng;
+        sts << dom << "->" << rng;
         row[rng] = get_representative(sts.str());
 #endif
         return row[rng];

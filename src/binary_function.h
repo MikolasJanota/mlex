@@ -72,7 +72,7 @@ class BinaryFunction {
         _hash_defined = true;
     }
 
-    void print(std::ostream &out, const char *pre) const;
+    std::ostream &print(std::ostream &out, const char *pre) const;
     void set_name(const std::string &s) { _name = s; }
     const std::string &get_name() const { return _name; }
     void set_additional_info(const std::string &s) { _additional_info = s; }

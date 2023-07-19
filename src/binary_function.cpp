@@ -8,7 +8,7 @@
 #include <iomanip> // std::setw
 #include <iostream>
 
-void BinaryFunction::print(std::ostream &out, const char *pre) const {
+std::ostream &BinaryFunction::print(std::ostream &out, const char *pre) const {
     out << pre;
     for (size_t j = 0; j < order(); j++)
         out << ((j == 0) ? "  " : " ") << j;
@@ -23,7 +23,9 @@ void BinaryFunction::print(std::ostream &out, const char *pre) const {
         }
         out << std::endl;
     }
+    return out;
 }
+
 std::ostream &BinaryFunction::print_gap(std::ostream &output) const {
     const auto n = order();
     output << "[ " << std::endl;

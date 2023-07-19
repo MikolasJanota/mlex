@@ -163,6 +163,12 @@ int main(int argc, char **argv) {
              << endl;
         exit(EXIT_FAILURE);
     }
+    if (options.diagonal && options.explicit_solver) {
+        cerr << "ERROR! explicit solver currently doesn't support diagonal "
+                "search"
+             << endl;
+        exit(EXIT_FAILURE);
+    }
 
     prn_header(output);
 

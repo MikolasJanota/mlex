@@ -162,8 +162,8 @@ class RowBudgeter : public IBudget {
 };
 
 LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
-    : LexminSolverBase(output, table),
-      d_fixed(output, table.order()), d_invariants(output, table) {}
+    : LexminSolverBase(output, table), d_fixed(output, table.order()),
+      d_invariants(output, table) {}
 
 LexminSolver::~LexminSolver() {}
 
@@ -598,7 +598,8 @@ void LexminSolver::solve() {
     }
     d_is_solved = true;
     if (!d_last_permutation.empty())
-        show_permutation(comment(2) << "perm:") << std::endl;
+        show_permutation(comment(2) << "perm:", d_last_permutation)
+            << std::endl;
 }
 
 size_t LexminSolver::id_row_elements(size_t dst_row, size_t src_row) {
@@ -659,27 +660,6 @@ std::ostream &LexminSolver::show_diag(std::ostream &out) {
     for (size_t i = 0; i < n; i++)
         out << (i ? ", " : " ") << d_fixed_cells->get(i, i);
     return out << ']';
-}
-
-std::ostream &LexminSolver::show_permutation(std::ostream &out) {
-    const auto n = d_table.order();
-    std::vector<bool> visit(n, true);
-    while (1) {
-        size_t s = 0;
-        while (s < visit.size() && !visit[s])
-            s++;
-        if (s == visit.size())
-            return out;
-        out << "(" << s;
-        visit[s] = false;
-        for (size_t i = d_last_permutation[s]; i != s;
-             i = d_last_permutation[i]) {
-            out << " " << i;
-            visit[i] = false;
-        }
-
-        out << ")";
-    }
 }
 
 void LexminSolver::make_last_permutation() {
