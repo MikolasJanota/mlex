@@ -8,6 +8,7 @@
 #include "binary_function.h"
 #include "encoding_explicit.h"
 #include <cassert>
+#include <cstddef>
 #include <vector>
 using SATSPC::Lit;
 #if !defined(NDEBUG) || defined(SOLVER_TRACING)
@@ -59,8 +60,8 @@ bool LexminSolverExplicit::run_sat(Minisat::vec<Minisat::Lit> &assumps) {
     const auto rv = d_sat->solve(assumps);
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
-    TRACE(comment(3) << "sc:" << rv << SHOW_TIME(read_cpu_time() - start_time)
-                     << '\n';);
+    comment(3) << "sc:" << rv << SHOW_TIME(read_cpu_time() - start_time)
+               << '\n';
     return rv;
 }
 
