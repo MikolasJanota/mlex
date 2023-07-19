@@ -60,8 +60,8 @@ bool LexminSolverExplicit::run_sat(Minisat::vec<Minisat::Lit> &assumps) {
     const auto rv = d_sat->solve(assumps);
     d_statistics.satTime->inc(read_cpu_time() - start_time);
     d_statistics.satCalls->inc();
-    comment(3) << "sc:" << rv << SHOW_TIME(read_cpu_time() - start_time)
-               << '\n';
+    comment(3) << "sc:" << d_statistics.satCalls->get() << ":" << rv
+               << SHOW_TIME(read_cpu_time() - start_time) << '\n';
     return rv;
 }
 
