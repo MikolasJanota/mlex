@@ -27,8 +27,10 @@ void LexminSolverExplicit::solve() {
     const auto n = d_table.order();
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
     d_encoding = std::make_unique<EncodingExplicit>(d_output, *d_sat, d_table);
+    const auto start_time = read_cpu_time();
     d_encoding->encode_bij();
     d_encoding->encode_iso();
+    d_statistics.encodingTime->inc(read_cpu_time() - start_time);
     if (d_options.opt1stRow && !d_options.diagonal)
         opt1stRow();
 
