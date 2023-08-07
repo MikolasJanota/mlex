@@ -7,7 +7,6 @@
 #include "lexmin_solver_explicit.h"
 #include "binary_function.h"
 #include "encoding_explicit.h"
-#include "ipasir_wrap.h"
 #include <cassert>
 #include <cstddef>
 #include <vector>
