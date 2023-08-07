@@ -107,6 +107,19 @@ int main(int argc, char **argv) {
                    "set the search type")
         ->default_val(SearchType::bin2)
         ->transform(CLI::CheckedTransformer(map, CLI::ignore_case));
+    // adapted from
+    // https://github.com/CLIUtils/CLI11/blob/main/examples/enum.cpp
+    std::map<std::string, ExplicitSearchType> mapExplicit{
+        {"binary", ExplicitSearchType::binary},
+        {"lowering", ExplicitSearchType::lowering},
+        {"left-2-right", ExplicitSearchType::left_to_right}};
+    // CheckedTransformer translates and checks whether the results are either
+    // in one of the strings or in one of the translations already
+    app.add_option("--explicit-search-type", options.explicit_search_type,
+                   "set the search type")
+        ->default_val(ExplicitSearchType::left_to_right)
+        ->transform(CLI::CheckedTransformer(mapExplicit, CLI::ignore_case));
+
     ///// TODO better help message
 
     app.add_flag("-d,!--no-d", options.diagonal, "Traverse diagonal first.")

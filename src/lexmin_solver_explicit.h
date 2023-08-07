@@ -14,16 +14,16 @@ class LexminSolverExplicit : public LexminSolverBase {
         : LexminSolverBase(output, table) {}
 
     virtual ~LexminSolverExplicit() {
-        if (d_solution)
-            delete d_solution;
+        if (d_sol)
+            delete d_sol;
     }
 
     virtual void solve() override;
 
-    /* Make solution as compact BinaryFunction */
+    /* Make solution as BinaryFunction */
     virtual BinaryFunction *make_solution() override {
-        auto *solution = d_solution;
-        d_solution = nullptr;
+        auto *solution = d_sol;
+        d_sol = nullptr;
         return solution;
     }
 
@@ -39,7 +39,11 @@ class LexminSolverExplicit : public LexminSolverBase {
   private:
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
     std::unique_ptr<EncodingExplicit> d_encoding;
-    BinaryFunction *d_solution = nullptr;
+    BinaryFunction *d_sol = nullptr;
     bool run_sat(Minisat::vec<Minisat::Lit> &assumps);
+    bool run_sat();
     void opt1stRow();
+    void solve_lowering();
+    void solve_binary();
+    void solve_left_to_right();
 };

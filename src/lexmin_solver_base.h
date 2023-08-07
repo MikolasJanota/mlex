@@ -21,7 +21,7 @@ class LexminSolverBase {
     virtual ~LexminSolverBase() {}
     virtual void solve() = 0;
 
-    /* Make solution as compact BinaryFunction */
+    /* Make solution as BinaryFunction */
     virtual BinaryFunction *make_solution() = 0;
 
     /* Make solution as compact fun representation */

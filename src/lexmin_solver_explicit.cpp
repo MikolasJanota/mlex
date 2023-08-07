@@ -7,6 +7,7 @@
 #include "lexmin_solver_explicit.h"
 #include "binary_function.h"
 #include "encoding_explicit.h"
+#include "ipasir_wrap.h"
 #include <cassert>
 #include <cstddef>
 #include <vector>
@@ -23,9 +24,40 @@ using SATSPC::Lit;
 #define TRACE(code)
 #endif
 
+void LexminSolverExplicit::solve_left_to_right() {
+    const auto n = d_table.order();
+    Minisat::vec<Minisat::Lit> assumps(1, SATSPC::lit_Error);
+    if (d_sol)
+        delete d_sol;
+    [[maybe_unused]] const auto is_sat = run_sat();
+    assert(is_sat);
+    d_sol = new BinaryFunction(n);
+    d_encoding->make_solution(*d_sol);
+    TRACE(d_sol->print(comment(3) << "init sol:\n", "#  ") << std::endl;);
+
+    for (size_t row = 0; row < n; ++row) {
+        for (size_t col = 0; col < n; ++col) {
+            const auto old = d_sol->get(row, col);
+            size_t val = 0;
+            for (; val < old; ++val) {
+                assumps[0] = d_encoding->val(row, col, val);
+                if (run_sat(assumps))
+                    break;
+            }
+            if (val < old) {
+                d_encoding->make_solution(*d_sol);
+                TRACE(d_sol->print(comment(3) << "sol:\n", "#  ")
+                          << std::endl;);
+            } else {
+                assert(val == old);
+            }
+            d_sat->addClause(d_encoding->val(row, col, val));
+        }
+    }
+}
+
 void LexminSolverExplicit::solve() {
     assert(!d_options.diagonal);
-    const auto n = d_table.order();
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
     d_encoding = std::make_unique<EncodingExplicit>(d_output, *d_sat, d_table);
     const auto start_time = read_cpu_time();
@@ -35,24 +67,50 @@ void LexminSolverExplicit::solve() {
     if (d_options.opt1stRow && !d_options.diagonal)
         opt1stRow();
 
-    if (d_solution)
-        delete d_solution;
-    d_solution = new BinaryFunction(n);
-    d_solution->set(d_table);
-    Lit last = d_encoding->encode_less(d_table);
-    Minisat::vec<Minisat::Lit> assumps(1, last);
-    while (run_sat(assumps)) {
-        d_sat->addClause(~last);
-        d_encoding->make_solution(*d_solution);
-        TRACE(d_solution->print(comment(3) << "sol:\n", "#  ") << std::endl;);
-        last = d_encoding->encode_less(*d_solution);
-        assumps[0] = last;
+    switch (d_options.explicit_search_type) {
+    case ExplicitSearchType::lowering: solve_lowering(); break;
+    case ExplicitSearchType::left_to_right: solve_left_to_right(); break;
+    case ExplicitSearchType::binary: solve_binary(); break;
     }
+
     if (d_options.verbose > 1) {
         std::vector<size_t> perm;
         make_permutation(perm);
         show_permutation(comment(2) << "perm:", perm) << std::endl;
     }
+}
+
+void LexminSolverExplicit::solve_binary() {
+    assert(false);
+    std::cerr << "TBD" << std::endl;
+    exit(100);
+    const auto n = d_table.order();
+    if (d_sol)
+        delete d_sol;
+    d_sol = new BinaryFunction(n);
+    Minisat::vec<Minisat::Lit> assumps;
+}
+
+void LexminSolverExplicit::solve_lowering() {
+    const auto n = d_table.order();
+    if (d_sol)
+        delete d_sol;
+    d_sol = new BinaryFunction(n);
+    d_sol->set(d_table);
+    Lit last = d_encoding->encode_less(d_table);
+    Minisat::vec<Minisat::Lit> assumps(1, last);
+    while (run_sat(assumps)) {
+        d_sat->addClause(~last);
+        d_encoding->make_solution(*d_sol);
+        TRACE(d_sol->print(comment(3) << "sol:\n", "#  ") << std::endl;);
+        last = d_encoding->encode_less(*d_sol);
+        assumps[0] = last;
+    }
+}
+
+bool LexminSolverExplicit::run_sat() {
+    Minisat::vec<Minisat::Lit> assumps;
+    return run_sat(assumps);
 }
 
 bool LexminSolverExplicit::run_sat(Minisat::vec<Minisat::Lit> &assumps) {
@@ -71,7 +129,7 @@ CompFunction LexminSolverExplicit::make_solution_comp() {
     CompFunctionBuilder b(n, 2);
     for (size_t r = 0; r < n; r++)
         for (size_t c = 0; c < n; c++)
-            b.push(d_solution->get(r, c));
+            b.push(d_sol->get(r, c));
     return b.make();
 }
 

@@ -27,6 +27,7 @@ class null_out_stream : public std::ostream {
 };
 
 enum SearchType { lin_us, lin_su, bin, bin2, adaptive };
+enum ExplicitSearchType { lowering, left_to_right, binary };
 
 struct Options {
     std::string file_name;
@@ -47,6 +48,7 @@ struct Options {
     bool budget_idem = false;
     size_t seq_counter_lits = 10;
     SearchType search_type = SearchType::lin_us;
+    ExplicitSearchType explicit_search_type = ExplicitSearchType::lowering;
     const char *comment_prefix = "#";
     std::string diag_file;
 };

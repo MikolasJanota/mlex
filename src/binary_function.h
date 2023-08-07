@@ -26,9 +26,19 @@ class BinaryFunction {
         _values[ix(i, j)] = val;
     }
 
+    size_t &cell(size_t ix) {
+        assert(ix < _values.size());
+        return _values[ix];
+    }
+
     void set(const BinaryFunction &o) {
         assert(o._order == _order);
         _values = o._values;
+    }
+
+    inline size_t ix(size_t i, size_t j) const {
+        assert(i < _order && j < _order);
+        return i * _order + j;
     }
 
     bool is_set(size_t i, size_t j) const { return _values[ix(i, j)] < _order; }
@@ -88,9 +98,4 @@ class BinaryFunction {
     std::string _name;
     std::string _additional_info;
     std::vector<size_t> _values;
-
-    inline size_t ix(size_t i, size_t j) const {
-        assert(i < _order && j < _order);
-        return i * _order + j;
-    }
 };
