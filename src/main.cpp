@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
     std::map<std::string, ExplicitSearchType> mapExplicit{
         {"binary", ExplicitSearchType::binary},
         {"lowering", ExplicitSearchType::lowering},
-        {"left-2-right", ExplicitSearchType::left_to_right}};
+        {"left-to-right", ExplicitSearchType::left_to_right}};
     // CheckedTransformer translates and checks whether the results are either
     // in one of the strings or in one of the translations already
     app.add_option("--explicit-search-type", options.explicit_search_type,
