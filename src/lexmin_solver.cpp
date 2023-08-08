@@ -503,11 +503,15 @@ void LexminSolver::solve() {
     if (d_options.diagonal || d_options.opt1stRow || d_options.id_elements)
         d_fixed_cells = std::make_unique<BinaryFunction>(n);
 
-    if (d_options.invariants)
+    if (d_options.invariants || d_options.inv_ord)
         d_invariants.calculate();
 
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
-    make_encoding();
+    d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
+    if (d_options.opt1stRow && !d_options.diagonal)
+        opt1stRow();
+    if (d_options.inv_ord)
+        enc_inv_ord();
     d_encoding->encode_bij();
 
     if (d_options.diagonal)
@@ -781,10 +785,44 @@ bool LexminSolver::test_sat(const Encoding::Assignment &asg) {
     return rv;
 }
 
-void LexminSolver::make_encoding() {
-    d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
-    if (d_options.opt1stRow && !d_options.diagonal)
-        opt1stRow();
+void LexminSolver::enc_inv_ord() {
+    const auto n = d_table.order();
+    const auto &invariants = d_invariants.invariants();
+    std::vector<InvariantVector> sorted_invariants;
+    InvariantVectorCmp cmp;
+    for (const auto &[inv, info] : invariants)
+        sorted_invariants.push_back(inv);
+    std::sort(sorted_invariants.begin(), sorted_invariants.end(), cmp);
+
+    std::vector<std::list<size_t>> blocks;
+    for (const auto &inv : sorted_invariants)
+        blocks.push_back(invariants.at(inv).original_rows);
+
+    size_t range_start = 0;
+    for (const auto &block : blocks) {
+        const auto range_stop = range_start + block.size();
+        if (d_options.verbose > 2) {
+            comment(3) << "inv block " << range_start << ".."
+                       << (range_stop - 1) << " {";
+            for (const auto k : block)
+                d_output.ccomment(3) << " " << k;
+            d_output.ccomment(3) << " }" << std::endl;
+        }
+        for (const auto row : block) {
+            for (size_t i = 0; i < range_start; i++)
+                d_sat->addClause(~d_encoding->perm(row, i));
+            for (size_t i = range_stop; i < n; i++)
+                d_sat->addClause(~d_encoding->perm(row, i));
+        }
+        if (block.size() == 1) {
+            const auto row = *block.begin();
+            if (d_fixed.set(row, range_start))
+                comment(2) << row << " fixed to " << d_fixed.src2dst(row)
+                           << " (inv_ord)" << std::endl;
+        }
+        range_start = range_stop;
+    }
+    closure_fixed();
 }
 
 void LexminSolver::opt1stRow() {

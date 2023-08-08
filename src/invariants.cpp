@@ -41,7 +41,8 @@ void Invariants::calculate() {
             calc.set_val(col, val);
             row_vals[col] = val;
         }
-        print_vec(d_output.comment(4) << "row: ", row_vals) << std::endl;
+        print_vec(d_output.comment(4) << "row " << row << ":", row_vals)
+            << std::endl;
         Looping lc(d_output, row_vals);
         for (auto col = n; col--;)
             calc.add_loop(lc.calc_loop(col));
@@ -107,6 +108,7 @@ size_t Looping::calc_loop(size_t query_ix) {
         next = d_fun[next];
     }
 
+    assert(has_val(next) || t >= time[next]);
     const size_t known_sz = has_val(next) ? d_value[next] : (t - time[next]);
 
     if (!has_val(next)) { // process discovered cycle

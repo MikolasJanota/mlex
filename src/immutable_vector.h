@@ -167,6 +167,21 @@ ImmutableVector<T, HashFun, Eq>::ImmutableVector(const std::vector<T> &es) {
 }
 
 template <class T, class HashFun = std::hash<T>, class Eq = std::equal_to<T>>
+class ImmutableVector_less {
+  public:
+    inline bool operator()(const ImmutableVector<T, HashFun, Eq> &v1,
+                           const ImmutableVector<T, HashFun, Eq> &v2) const {
+        if (v1.size() != v2.size())
+            return v1.size() < v2.size();
+        for (size_t i = 0; i < v1.size(); i++) {
+            if (v1[i] != v2[i])
+                return v1[i] < v2[i];
+        }
+        return false;
+    }
+};
+
+template <class T, class HashFun = std::hash<T>, class Eq = std::equal_to<T>>
 class ImmutableVector_equal {
   public:
     inline bool operator()(const ImmutableVector<T, HashFun, Eq> &v1,

@@ -91,6 +91,8 @@ int main(int argc, char **argv) {
     app.add_flag("-P", options.print, "Print into files.")->default_val(false);
     app.add_flag("-m", options.mace_format, "Use MACE format for input/output.")
         ->default_val(false);
+    app.add_flag("-i", options.inv_ord, "Use invariant ordering.")
+        ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models.")
         ->default_val(false);
 
@@ -176,6 +178,20 @@ int main(int argc, char **argv) {
              << endl;
         exit(EXIT_FAILURE);
     }
+
+    if (options.diagonal && options.inv_ord) {
+        cerr << "ERROR! Diagonal is incompatible with the invariant ordering."
+             << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    if (options.opt1stRow && options.inv_ord) {
+        cerr << "ERROR! First row optimization is incompatible with the "
+                "invariant ordering."
+             << endl;
+        exit(EXIT_FAILURE);
+    }
+
     if (options.diagonal && options.explicit_solver) {
         cerr << "ERROR! explicit solver currently doesn't support diagonal "
                 "search"

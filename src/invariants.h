@@ -10,8 +10,8 @@
 #include "options.h"
 #include <cassert>
 #include <cstddef>
-#include <list>
 #include <limits>
+#include <list>
 #include <memory> // for unique_ptr
 #include <set>
 #include <unordered_map>
@@ -24,53 +24,77 @@ typedef ImmutableVector<size_t> InvariantVector;
 class BinaryFunction;
 class Output;
 
+/*  Utility class to produce invariants. */
 class InvariantCalculator {
   public:
     InvariantCalculator(size_t n) : d_n(n) {}
 
-    void add_loop(size_t loop_sz) {
-        const auto inv_id = invariant_count + loop_sz;
-        if (d_invv.size() <= inv_id)
-            d_invv.resize(inv_id + 1, 0);
-        d_invv[inv_id]++;
-    }
-
-    void set_val(size_t col, size_t val) {
-        size_t inv_id = 0;
-        if (val == d_row)
-            d_invv[inv_id]++;
-        inv_id++;
-        if (val == col)
-            d_invv[inv_id]++;
-        inv_id++;
-        if ((val == col) && (val == d_row))
-            d_invv[inv_id]++;
-        inv_id++;
-        if (!d_seen[val]) {
-            d_seen[val] = true;
-            d_invv[inv_id]++;
-        }
-        inv_id++;
-        assert(inv_id == invariant_count);
-    }
-
     inline InvariantVector make_ivec() { return InvariantVector(d_invv); }
 
+    /* resets the class for constructing invariant for a new row */
     void set_row(size_t row) {
         d_row = row;
         d_seen.clear();
         d_seen.resize(d_n, false);
         d_invv.clear();
-        d_invv.resize(invariant_count, 0);
+        d_invv.resize(fixed_invariant_count, 0);
     }
 
-    const size_t invariant_count = 4;
+    /* add looping value for an element (calculated by Looping) */
+    void add_loop(size_t loop_sz) {
+        const auto inv_id = fixed_invariant_count + loop_sz;
+        if (d_invv.size() <= inv_id)
+            d_invv.resize(inv_id + 1, 0);
+        d_invv[inv_id]++;
+    }
+
+    /* register a value val in column col */
+    void set_val(size_t col, size_t val) {
+        size_t inv_id = 0;
+        if ((val == col) && (val == d_row)) // idempotent
+            d_invv[inv_id]++;
+        inv_id++;
+        if (val == d_row) // freq of r in row r
+            d_invv[inv_id]++;
+        inv_id++;
+        // TODO: next useless with loops?
+        if (val == col) // freq of t[r,c]=c
+            d_invv[inv_id]++;
+        inv_id++;
+        if (!d_seen[val]) { // freq of elements in the row
+            d_seen[val] = true;
+            d_invv[inv_id]++;
+        }
+        inv_id++;
+        assert(inv_id == fixed_invariant_count);
+    }
+
+    static const size_t fixed_invariant_count = 4;
 
   private:
     const size_t d_n;
     size_t d_row;
     std::vector<size_t> d_invv;
     std::vector<bool> d_seen;
+};
+
+struct InvariantVectorCmp {
+    inline bool operator()(const InvariantVector &v1,
+                           const InvariantVector &v2) const {
+        const auto fixedsz = InvariantCalculator::fixed_invariant_count;
+        assert(v1.size() >= fixedsz);
+        assert(v2.size() >= fixedsz);
+        for (size_t i = 0; i < fixedsz; i++)
+            if (v1[i] != v2[i])
+                return v1[i] > v2[i];
+        if (v1.size() != v2.size())
+            return v1.size() > v2.size();
+        for (size_t i = fixedsz; i < v1.size(); i++) {
+            if (v1[i] != v2[i])
+                return v1[i] > v2[i];
+        }
+        return false;
+    }
 };
 
 class DiagInvariants {
@@ -125,12 +149,20 @@ class DiagInvariants {
     std::unique_ptr<inv_map> d_inv2elems;
 };
 
+/* The class maintains the set of invariants for the multiplication table.
+ */
 class Invariants {
   public:
+    /* For invariant remember to which rows it belongs and how many times it
+     * was already used in the target table. */
     struct Info {
         std::list<size_t> original_rows;
         size_t used = 0;
     };
+    typedef std::unordered_map<InvariantVector, Info,
+                               ImmutableVector_hash<size_t>,
+                               ImmutableVector_equal<size_t>>
+        Inv2Info;
 
     Invariants(Output &output, const BinaryFunction &table)
         : d_output(output), d_table(table) {}
@@ -142,22 +174,24 @@ class Invariants {
         assert(d_invariants.end() != i);
         return i->second;
     }
+    const Inv2Info &invariants() const { return d_invariants; }
 
   private:
     Output &d_output;
     const BinaryFunction &d_table;
-    std::unordered_map<InvariantVector, Info, ImmutableVector_hash<size_t>,
-                       ImmutableVector_equal<size_t>>
-        d_invariants;
+    Inv2Info d_invariants;
 };
 
+/* Calculate how many steps are needed to do in the function in order to
+ * loop around following the function fun, i.e. the oriented graph v ->
+ * f(v).*/
 class Looping {
   public:
     Looping(Output &output, const std::vector<size_t> &fun)
         : d_output(output), d_order(fun.size()), d_fun(fun),
           d_value(d_order, std::numeric_limits<std::size_t>::max()){};
 
-    bool has_val(size_t i) { return d_value[i] <= d_order; }
+    /* calculate looping for the element query_ix */
     size_t calc_loop(size_t query_ix);
 
   private:
@@ -165,5 +199,6 @@ class Looping {
     const size_t d_order;
     const std::vector<size_t> &d_fun;
     std::vector<size_t> d_value;
+    bool has_val(size_t i) { return d_value[i] <= d_order; }
 };
 

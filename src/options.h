@@ -46,6 +46,7 @@ struct Options {
     bool use_hash_table = false;
     bool diagonal = false;
     bool budget_idem = false;
+    bool inv_ord = false;
     size_t seq_counter_lits = 10;
     SearchType search_type = SearchType::lin_us;
     ExplicitSearchType explicit_search_type = ExplicitSearchType::lowering;

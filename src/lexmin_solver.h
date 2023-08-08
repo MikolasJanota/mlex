@@ -68,7 +68,6 @@ class LexminSolver : public LexminSolverBase {
     Invariants d_invariants;
     std::unique_ptr<RowBudgets> d_budgets;
 
-    void make_encoding();
     bool test_sat(const Encoding::Assignment &asg);
     bool test_sat(const std::pair<size_t, size_t> &cell,
                   const std::vector<size_t> &vals);
@@ -76,17 +75,26 @@ class LexminSolver : public LexminSolverBase {
 
     /* try to infer additional constraints on the first row */
     void opt1stRow();
+
+    void enc_inv_ord();
+
     void calculate_budgets_row_tot();
     void calculate_budgets_col();
+
     void run_diagonal();
-    size_t id_row_elements(size_t dst_row, size_t src_row);
-    void closure_fixed();
     void calculate_diagonal(size_t max_idem_reps,
                             const DiagInvariants &di_orig);
+
+    size_t id_row_elements(size_t dst_row, size_t src_row);
+
+    void closure_fixed();
+
     void mark_used_rows(const Invariants::Info &rows, size_t current_row);
 
-    // returns whether updates should be updated
+    // returns whether budgets should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
+
+    /* find a value for a given cell */
     size_t find_value(Encoding::Assignment &a, IBudget &budget,
                       const std::optional<size_t> &last_val);
     size_t find_value_unsat_sat(Encoding::Assignment &a, IBudget &budget,
