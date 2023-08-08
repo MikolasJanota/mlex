@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "auxiliary.h"
+#include "binary_function.h"
 #include "immutable_vector.h"
 #include "options.h"
 #include <cassert>
@@ -23,6 +24,73 @@ typedef ImmutableVector<size_t> InvariantVector;
 
 class BinaryFunction;
 class Output;
+
+class BigInvariant {
+  public:
+    enum InvariantType {
+        IDEM = 0,
+        ROW_ORDER,
+        ROW_DIST,
+        COL_ORDER,
+        COL_DIST,
+        DIAG_FREQ,
+        DIAG_ORDER,
+        TOT_FREQ,
+        LAST
+    };
+
+    BigInvariant(size_t order) : d_order(order) {
+        const auto n = d_order;
+        d_vals.resize(InvariantType::LAST);
+        get_vals(InvariantType::IDEM).resize(1);
+        get_vals(InvariantType::ROW_ORDER).resize(n + 1);
+        get_vals(InvariantType::COL_ORDER).resize(n + 1);
+        get_vals(InvariantType::ROW_DIST).resize(n + 1);
+        get_vals(InvariantType::COL_DIST).resize(n + 1);
+        get_vals(InvariantType::DIAG_FREQ).resize(1);
+        get_vals(InvariantType::DIAG_ORDER).resize(1);
+        get_vals(InvariantType::TOT_FREQ).resize(1);
+    }
+
+    std::vector<size_t> &get_vals(InvariantType it) {
+        const auto ix = static_cast<size_t>(it);
+        assert(ix < d_vals.size());
+        return d_vals[ix];
+    }
+
+    inline InvariantVector make_ivec();
+    std::ostream &print(std::ostream &o, const char *pref) {
+        o << pref << "IDEM:" << get_vals(InvariantType::IDEM)[0] << std::endl;
+        o << pref << "TOT_FREQ:" << get_vals(InvariantType::TOT_FREQ)[0]
+          << std::endl;
+        o << pref << "DIAG_ORDER:" << get_vals(InvariantType::DIAG_ORDER)[0]
+          << std::endl;
+        o << pref << "DIAG_FREQ:" << get_vals(InvariantType::DIAG_FREQ)[0]
+          << std::endl;
+        print_histo(o << pref << "ROW_ORDER:",
+                    get_vals(InvariantType::ROW_ORDER))
+            << std::endl;
+        print_histo(o << pref << "COL_ORDER:",
+                    get_vals(InvariantType::COL_ORDER))
+            << std::endl;
+        print_histo(o << pref << "ROW_DIST:", get_vals(InvariantType::ROW_DIST))
+            << std::endl;
+        print_histo(o << pref << "COL_DIST:", get_vals(InvariantType::COL_DIST))
+            << std::endl;
+        return o;
+    }
+
+  private:
+    const size_t d_order;
+    std::vector<std::vector<size_t>> d_vals;
+    std::ostream &print_histo(std::ostream &o, const std::vector<size_t> &vs) {
+        for (size_t i = 0; i < vs.size(); i++) {
+            if (vs[i] > 0)
+                o << " " << i << ":" << vs[i];
+        }
+        return o;
+    }
+};
 
 /*  Utility class to produce invariants. */
 class InvariantCalculator {
@@ -51,6 +119,7 @@ class InvariantCalculator {
 
     /* add distance to row value for an element (calculated by Distances) */
     void add_distance(size_t distance) {
+        assert(distance <= d_n);
         const auto inv_id = fixed_invariant_count + d_n + 1 + distance;
         if (d_invv.size() <= inv_id)
             d_invv.resize(inv_id + 1, 0);
@@ -70,7 +139,7 @@ class InvariantCalculator {
         if (val == col) // freq of t[r,c]=c
             d_invv[inv_id]++;
         inv_id++;
-        if (!d_seen[val]) { // freq of elements in the row
+        if (!d_seen[val]) { // number of elements in the row
             d_seen[val] = true;
             d_invv[inv_id]++;
         }
@@ -202,6 +271,7 @@ class Looping {
 
     /* calculate looping for the element query_ix */
     size_t calc_loop(size_t query_ix);
+    size_t operator()(size_t query_ix) { return calc_loop(query_ix); }
 
   private:
     Output &d_output;
@@ -217,8 +287,7 @@ class Distances {
   public:
     Distances(Output &output, const std::vector<size_t> &fun, size_t target)
         : d_output(output), d_order(fun.size()), d_fun(fun),
-          d_infinity(d_order + 1),
-          d_undef(std::numeric_limits<std::size_t>::max()),
+          d_infinity(d_order), d_undef(std::numeric_limits<std::size_t>::max()),
           d_distance(d_order, d_undef), d_target(target) {
         assert(d_infinity < d_undef);
         d_distance[d_target] = 0;
@@ -226,6 +295,7 @@ class Distances {
 
     /* calculate distance for the element query_ix */
     size_t calc_distance(size_t query_ix);
+    size_t operator()(size_t query_ix) { return calc_distance(query_ix); }
 
   private:
     Output &d_output;
@@ -236,5 +306,29 @@ class Distances {
     std::vector<size_t> d_distance;
     size_t d_target;
     bool has_val(size_t i) { return d_distance[i] < d_undef; }
+};
+
+class BigInvariantCalculator {
+  public:
+    using InvariantType = BigInvariant::InvariantType;
+    BigInvariantCalculator(Output &output, const BinaryFunction &table)
+        : d_output(output), d_table(table) {}
+    struct Info {
+        std::set<size_t> elems;
+    };
+    typedef std::unordered_map<InvariantVector, Info,
+                               ImmutableVector_hash<size_t>,
+                               ImmutableVector_equal<size_t>>
+        Inv2Info;
+
+    void calculate();
+    const Inv2Info &invariants() const { return d_invariants; }
+
+  private:
+    Output &d_output;
+    const BinaryFunction &d_table;
+    Inv2Info d_invariants;
+    std::vector<size_t> d_occs;
+    InvariantVector calculate(DiagInvariants &dgc, size_t i);
 };
 

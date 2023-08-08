@@ -28,6 +28,17 @@
 #define TRACE(code)
 #endif
 
+InvariantVector BigInvariant::make_ivec() {
+    size_t sz = 0;
+    for (const auto &vs : d_vals)
+        sz += vs.size();
+    std::vector<size_t> vals;
+    vals.reserve(sz);
+    for (const auto &vs : d_vals)
+        vals.insert(vals.end(), vs.begin(), vs.end());
+    return InvariantVector(vals);
+}
+
 void Invariants::calculate() {
     const auto n = d_table.order();
     InvariantCalculator calc(n);
@@ -167,3 +178,58 @@ size_t Looping::calc_loop(size_t query_ix) {
     return d_value[query_ix];
 }
 
+InvariantVector BigInvariantCalculator::calculate(DiagInvariants &dgc,
+                                                  size_t i) {
+
+    const auto n = d_table.order();
+    assert(i < n);
+
+    std::vector<size_t> vals(n, -1);
+    Looping lc(d_output, vals);
+    Distances dc(d_output, vals, i);
+    BigInvariant inv(n);
+    inv.get_vals(InvariantType::DIAG_FREQ)[0] = dgc.get_reps(i);
+    inv.get_vals(InvariantType::DIAG_ORDER)[0] = dgc.get_loop(i);
+    inv.get_vals(InvariantType::IDEM)[0] = d_table.get(i, i) == i ? 1 : 0;
+    inv.get_vals(InvariantType::TOT_FREQ)[0] = d_occs[i];
+
+    { // row invariants
+        for (auto j = n; j--;)
+            vals[j] = d_table.get(i, j);
+        for (auto j = n; j--;) {
+            inv.get_vals(InvariantType::ROW_ORDER)[lc(j)]++;
+            inv.get_vals(InvariantType::ROW_DIST)[dc(j)]++;
+        }
+    }
+
+    { // col invariants
+        for (auto j = n; j--;)
+            vals[j] = d_table.get(j, i);
+        for (auto j = n; j--;) {
+            inv.get_vals(InvariantType::COL_ORDER)[lc(j)]++;
+            inv.get_vals(InvariantType::COL_DIST)[dc(j)]++;
+        }
+    }
+    if (d_output.d_options.verbose > 3)
+        inv.print(d_output.comment(3) << i << ":inv\n", "#  ") << std::endl;
+    return inv.make_ivec();
+}
+
+void BigInvariantCalculator::calculate() {
+    const auto n = d_table.order();
+    DiagInvariants dgc(d_output, n);
+    for (size_t i = n; i--;) {
+        dgc.add(i);
+        dgc.set(i, d_table.get(i, i));
+    }
+    dgc.calculate();
+
+    d_occs.clear();
+    d_occs.resize(n, 0);
+    for (auto r = n; r--;)
+        for (auto c = n; c--;)
+            d_occs[d_table.get(r, c)]++;
+
+    for (size_t i = n; i--;)
+        d_invariants[calculate(dgc, i)].elems.insert(i);
+}

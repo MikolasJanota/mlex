@@ -791,16 +791,18 @@ bool LexminSolver::test_sat(const Encoding::Assignment &asg) {
 
 void LexminSolver::enc_inv_ord() {
     const auto n = d_table.order();
-    const auto &invariants = d_invariants.invariants();
+    BigInvariantCalculator big(d_output, d_table);
+    big.calculate();
+    const auto &invariants = big.invariants();
     std::vector<InvariantVector> sorted_invariants;
     InvariantVectorCmp cmp;
     for (const auto &[inv, info] : invariants)
         sorted_invariants.push_back(inv);
     std::sort(sorted_invariants.begin(), sorted_invariants.end(), cmp);
 
-    std::vector<std::list<size_t>> blocks;
+    std::vector<std::set<size_t>> blocks;
     for (const auto &inv : sorted_invariants)
-        blocks.push_back(invariants.at(inv).original_rows);
+        blocks.push_back(invariants.at(inv).elems);
 
     size_t range_start = 0;
     for (const auto &block : blocks) {
@@ -812,16 +814,16 @@ void LexminSolver::enc_inv_ord() {
                 d_output.ccomment(3) << " " << k;
             d_output.ccomment(3) << " }" << std::endl;
         }
-        for (const auto row : block) {
+        for (const auto elem : block) {
             for (size_t i = 0; i < range_start; i++)
-                d_sat->addClause(~d_encoding->perm(row, i));
+                d_sat->addClause(~d_encoding->perm(elem, i));
             for (size_t i = range_stop; i < n; i++)
-                d_sat->addClause(~d_encoding->perm(row, i));
+                d_sat->addClause(~d_encoding->perm(elem, i));
         }
         if (block.size() == 1) {
-            const auto row = *block.begin();
-            if (d_fixed.set(row, range_start))
-                comment(2) << row << " fixed to " << d_fixed.src2dst(row)
+            const auto elem = *block.begin();
+            if (d_fixed.set(elem, range_start))
+                comment(2) << elem << " fixed to " << d_fixed.src2dst(elem)
                            << " (inv_ord)" << std::endl;
         }
         range_start = range_stop;
