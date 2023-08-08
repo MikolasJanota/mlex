@@ -581,8 +581,12 @@ void LexminSolver::solve() {
 
         if (d_options.invariants && row + 1 < n) {
             Looping lc(d_output, row_vals);
-            for (auto col = n; col--;)
+            Distances dc(d_output, row_vals, row);
+            for (auto col = n; col--;) {
                 calc.add_loop(lc.calc_loop(col));
+                if (d_output.d_options.distance_invariant)
+                    calc.add_distance(dc.calc_distance(col));
+            }
             update_budgets = process_invariant(calc.make_ivec(), row);
         }
 

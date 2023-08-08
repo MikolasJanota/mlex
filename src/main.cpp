@@ -93,6 +93,9 @@ int main(int argc, char **argv) {
         ->default_val(false);
     app.add_flag("-i", options.inv_ord, "Use invariant ordering.")
         ->default_val(false);
+    app.add_flag("-D", options.distance_invariant,
+                 "Use distance to row as invariant.")
+        ->default_val(false);
     app.add_flag("-u", options.unique, "Output only unique models.")
         ->default_val(false);
 

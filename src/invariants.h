@@ -42,7 +42,16 @@ class InvariantCalculator {
 
     /* add looping value for an element (calculated by Looping) */
     void add_loop(size_t loop_sz) {
+        assert(loop_sz <= d_n);
         const auto inv_id = fixed_invariant_count + loop_sz;
+        if (d_invv.size() <= inv_id)
+            d_invv.resize(inv_id + 1, 0);
+        d_invv[inv_id]++;
+    }
+
+    /* add distance to row value for an element (calculated by Distances) */
+    void add_distance(size_t distance) {
+        const auto inv_id = fixed_invariant_count + d_n + 1 + distance;
         if (d_invv.size() <= inv_id)
             d_invv.resize(inv_id + 1, 0);
         d_invv[inv_id]++;
@@ -200,5 +209,32 @@ class Looping {
     const std::vector<size_t> &d_fun;
     std::vector<size_t> d_value;
     bool has_val(size_t i) { return d_value[i] <= d_order; }
+};
+
+/* Calculate how many steps are needed to reach  a fixed element in the function
+ * graph fun, i.e. the oriented graph v -> f(v).*/
+class Distances {
+  public:
+    Distances(Output &output, const std::vector<size_t> &fun, size_t target)
+        : d_output(output), d_order(fun.size()), d_fun(fun),
+          d_infinity(d_order + 1),
+          d_undef(std::numeric_limits<std::size_t>::max()),
+          d_distance(d_order, d_undef), d_target(target) {
+        assert(d_infinity < d_undef);
+        d_distance[d_target] = 0;
+    }
+
+    /* calculate distance for the element query_ix */
+    size_t calc_distance(size_t query_ix);
+
+  private:
+    Output &d_output;
+    const size_t d_order;
+    const std::vector<size_t> &d_fun;
+    const size_t d_infinity;
+    const size_t d_undef;
+    std::vector<size_t> d_distance;
+    size_t d_target;
+    bool has_val(size_t i) { return d_distance[i] < d_undef; }
 };
 

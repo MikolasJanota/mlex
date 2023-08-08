@@ -44,8 +44,12 @@ void Invariants::calculate() {
         print_vec(d_output.comment(4) << "row " << row << ":", row_vals)
             << std::endl;
         Looping lc(d_output, row_vals);
-        for (auto col = n; col--;)
+        Distances dc(d_output, row_vals, row);
+        for (auto col = n; col--;) {
             calc.add_loop(lc.calc_loop(col));
+            if (d_output.d_options.distance_invariant)
+                calc.add_distance(dc.calc_distance(col));
+        }
         InvariantVector iinv = calc.make_ivec();
         auto [it, _] = d_invariants.insert({iinv, Info()});
         it->second.original_rows.push_back(row);
@@ -89,7 +93,38 @@ void DiagInvariants::calc_inverse() {
 
 void DiagInvariants::set(size_t i, size_t val) { d_diagonal[i] = val; }
 
+size_t Distances::calc_distance(size_t query_ix) {
+    assert(query_ix < d_order);
+    assert(has_val(d_target) && d_distance[d_target] == 0);
+    if (has_val(query_ix)) {
+        TRACE(d_output.comment(4)
+                  << "dc: " << query_ix << ":" << d_distance[query_ix]
+                  << " (mem)" << std::endl;);
+        return d_distance[query_ix];
+    }
+    std::vector<bool> seen(d_order, false);
+    std::vector<size_t> stack;
+    auto next = query_ix;
+    // either hit a cycle or something known
+    while (!has_val(next) && !seen[next]) {
+        stack.push_back(next);
+        seen[next] = true;
+        next = d_fun[next];
+    }
+    size_t dist = has_val(next) ? d_distance[next] : d_infinity;
+    while (!stack.empty()) {
+        dist = (dist == d_infinity) ? dist : dist + 1;
+        d_distance[stack.back()] = dist;
+        stack.pop_back();
+    }
+    assert(has_val(query_ix));
+    TRACE(d_output.comment(4) << "dc: " << query_ix << ":"
+                              << d_distance[query_ix] << std::endl;);
+    return d_distance[query_ix];
+}
+
 size_t Looping::calc_loop(size_t query_ix) {
+
     if (has_val(query_ix)) {
         TRACE(d_output.comment(4)
                   << "lc: " << query_ix << ":" << d_value[query_ix] << " (mem)"
