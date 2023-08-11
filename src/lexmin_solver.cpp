@@ -506,6 +506,12 @@ void LexminSolver::solve() {
     if (d_options.invariants || d_options.inv_ord)
         d_invariants.calculate();
 
+    std::unique_ptr<ColorInvariantCalculator> ccalc;
+
+    if (d_options.color) {
+        d_colors = std::make_unique<ColorInvariantManager>(d_output, d_table);
+    }
+
     d_sat = std::make_unique<SATSPC::MiniSatExt>();
     d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
     if (d_options.opt1stRow && !d_options.diagonal)
@@ -602,6 +608,8 @@ void LexminSolver::solve() {
                 closure_fixed();
             if (update_budgets && budgeting)
                 calculate_budgets_row_tot();
+            if (d_options.color)
+                d_colors->add_row(row, *(d_fixed_cells.get()));
         }
     }
     d_is_solved = true;
@@ -872,6 +880,8 @@ void LexminSolver::opt1stRow() {
             some_first_row = row;
         } else {
             d_sat->addClause(~d_encoding->perm(row, 0));
+            if (d_colors)
+                d_colors->d_allowed_mapping.disallow(row, 0);
         }
     }
 
@@ -882,6 +892,10 @@ void LexminSolver::opt1stRow() {
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
         d_fixed.set(some_first_row, 0);
+        if (d_colors) {
+            for (size_t j = 1; j < n; j++)
+                d_colors->d_allowed_mapping.disallow(some_first_row, j);
+        }
         comment(2) << some_first_row << " fixed to 0 (opt1stRow)" << std::endl;
     }
 }

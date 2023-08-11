@@ -131,6 +131,8 @@ int main(int argc, char **argv) {
         ->default_val(false);
     app.add_flag("-r,!--no-r", options.invariants, "Use row invariants.")
         ->default_val(true);
+    app.add_flag("-c", options.color, "Use color invariants.")
+        ->default_val(false);
     app.add_flag("-e,!--no-e", options.id_elements,
                  "Try to identify elements when a row is identified.")
         ->default_val(true);

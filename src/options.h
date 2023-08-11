@@ -37,6 +37,7 @@ struct Options {
     bool explicit_solver = false;
     bool mace_format = false;
     bool unique = false;
+    bool color = false;
     bool opt1stRow = false;
     bool simp_sat_row = false;
     bool budgeting = false;

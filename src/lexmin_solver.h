@@ -5,8 +5,10 @@
  * Copyright (C) 2022, Mikolas Janota
  */
 #pragma once
+#include "allowed_mapping.h"
 #include "auxiliary.h"       // for SATSPC
 #include "binary_function.h" // for BinaryFunction
+#include "color_invariants.h"
 #include "comp_function.h"
 #include "encoding.h"
 #include "fixed_elem_map.h"
@@ -66,6 +68,8 @@ class LexminSolver : public LexminSolverBase {
     std::unique_ptr<BinaryFunction> d_fixed_cells;
 
     Invariants d_invariants;
+    std::unique_ptr<ColorInvariantManager> d_colors;
+
     std::unique_ptr<RowBudgets> d_budgets;
 
     bool test_sat(const Encoding::Assignment &asg);
