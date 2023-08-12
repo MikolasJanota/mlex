@@ -20,7 +20,7 @@ class AllowedMapping {
     }
 
     bool disallow(size_t from, size_t to) {
-        const auto oldv = d_allowed[from][to];
+        const bool oldv = d_allowed[from][to];
         d_allowed[from][to] = false;
         return oldv;
     }

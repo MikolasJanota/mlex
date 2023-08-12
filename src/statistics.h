@@ -18,8 +18,10 @@ class StatisticsManager {
         all.push_back(readModels = new IntStatistic("read models"));
         all.push_back(unique1stRow = new IntStatistic("unique 1st row"));
         all.push_back(fixedElements = new IntStatistic("fixed elements"));
-        all.push_back(disallowed = new IntStatistic("disallowed elements"));
+        all.push_back(disallowed = new IntStatistic("disallowed mappings"));
         all.push_back(uniqueInv = new IntStatistic("unique by invariants"));
+        all.push_back(uniqueColInv =
+                          new IntStatistic("unique by col invariants"));
         all.push_back(uniqueDiag1Elem =
                           new IntStatistic("unique diag 1st elem"));
         all.push_back(uniqueDiagElem = new IntStatistic("unique diag elem"));
@@ -96,6 +98,7 @@ class StatisticsManager {
     IntStatistic *inferredCells;
     IntStatistic *uniqueDiag1Elem;
     IntStatistic *uniqueInv;
+    IntStatistic *uniqueColInv;
     IntStatistic *producedModels;
     IntStatistic *readModels;
     DoubleStatistic *encodingTime;

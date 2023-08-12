@@ -733,6 +733,10 @@ size_t LexminSolver::get_val(size_t row, size_t col) const {
 void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
     const auto n = d_table.order();
     d_output.comment(3) << "match lines:" << src_row << "->" << dst_row << endl;
+    if (d_fixed.set(src_row, dst_row)) {
+        comment(2) << src_row << " fixed to " << dst_row << std::endl;
+        d_statistics.uniqueColInv->inc();
+    }
     ColorInvariantCalculator srcc(d_output, d_colors->d_color_count,
                                   d_colors->d_colors_src);
     srcc.set_row(src_row);
@@ -766,6 +770,15 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
                 if (!contains(dst_elems, dst_elem))
                     if (try_disallow(src_elem, dst_elem))
                         dcount++;
+
+        if (src_elems.size() == 1) {
+            const auto se = *(src_elems.begin());
+            const auto de = *(dst_elems.begin());
+            if (d_fixed.set(se, de)) {
+                comment(2) << se << " fixed to " << de << std::endl;
+                d_statistics.uniqueColInv->inc();
+            }
+        }
     }
 }
 
@@ -800,6 +813,8 @@ bool LexminSolver::process_invariant_color(size_t current_row) {
 }
 
 bool LexminSolver::try_disallow(size_t from, size_t to) {
+    /* comment(4) << "try_disallow " << from << "->" << to << "@" */
+    /*            << d_colors->d_allowed_mapping.allowed(from, to) << endl; */
     const auto rv = d_colors->d_allowed_mapping.disallow(from, to);
     if (rv) {
         d_sat->addClause(~d_encoding->perm(from, to));
@@ -959,7 +974,7 @@ void LexminSolver::opt1stRow() {
         } else {
             d_sat->addClause(~d_encoding->perm(row, 0));
             if (d_colors)
-                d_colors->d_allowed_mapping.disallow(row, 0);
+                try_disallow(row, 0);
         }
     }
 
