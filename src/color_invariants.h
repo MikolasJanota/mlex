@@ -9,6 +9,7 @@
 #include "binary_function.h"
 #include "immutable_vector.h"
 #include "invariants.h"
+#include "options.h"
 #include <cstddef>
 #include <list>
 #include <ostream>
@@ -23,10 +24,10 @@ class ColorInvariantCalculator {
                                ImmutableVector_equal<size_t>>
         InvHistogram;
 
-    ColorInvariantCalculator(size_t color_count,
+    ColorInvariantCalculator(Output &output, size_t color_count,
                              const std::vector<size_t> &colors)
-        : d_n(colors.size()), d_color_count(color_count),
-          d_node_invariant_size(d_color_count + 2), d_colors(colors),
+        : d_output(output), d_n(colors.size()), d_color_count(color_count),
+          d_node_invariant_size(d_color_count + 3), d_colors(colors),
           d_values(d_n, -1) {
         assert(d_colors.size() == d_n);
     }
@@ -49,6 +50,7 @@ class ColorInvariantCalculator {
     InvHistogram inv() { return d_frequencies; };
 
   protected:
+    Output &d_output;
     const size_t d_n;
 
     // number of colors we are currently using
@@ -71,6 +73,9 @@ class ColorInvariantCalculator {
 
     // number of current row
     size_t d_row;
+
+    void print_node_invariant(size_t node,
+                              const std::vector<size_t> &inv) const;
 };
 
 class InvHistogram_eq {
@@ -115,6 +120,8 @@ struct ColorInvariantManager {
     InvMap d_src_row_color_invariants;
     InvMap d_dst_row_color_invariants;
     AllowedMapping d_allowed_mapping;
+    std::vector<Invariant> d_row_inv_src;
+    std::vector<Invariant> d_row_inv_dst;
 
     bool add_row(size_t row, const BinaryFunction &table);
     void build_colors();

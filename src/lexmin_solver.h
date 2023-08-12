@@ -97,6 +97,9 @@ class LexminSolver : public LexminSolverBase {
 
     // returns whether budgets should be updated
     bool process_invariant(const InvariantVector &invv, size_t current_row);
+    bool try_disallow(size_t from, size_t to);
+
+    bool process_invariant_color(size_t current_row);
 
     /* find a value for a given cell */
     size_t find_value(Encoding::Assignment &a, IBudget &budget,

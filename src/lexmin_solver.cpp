@@ -21,7 +21,7 @@
 #include <vector>
 using SATSPC::Lit;
 using SATSPC::mkLit;
-
+using std::endl;
 /* #define SOLVER_TRACING */
 #if !defined(NDEBUG) || defined(SOLVER_TRACING)
 #define TRACE(code)                                                            \
@@ -609,7 +609,7 @@ void LexminSolver::solve() {
             if (update_budgets && budgeting)
                 calculate_budgets_row_tot();
             if (d_options.color)
-                d_colors->add_row(row, *(d_fixed_cells.get()));
+                process_invariant_color(row);
         }
     }
     d_is_solved = true;
@@ -730,6 +730,43 @@ size_t LexminSolver::get_val(size_t row, size_t col) const {
     return d_last_permutation[val];
 }
 
+bool LexminSolver::process_invariant_color(size_t current_row) {
+    const auto n = d_table.order();
+    d_colors->add_row(current_row, *(d_fixed_cells.get()));
+    size_t dcount = 0;
+    for (const auto &[inv, dst_rows] : d_colors->d_dst_row_color_invariants) {
+        const auto &src_rows = d_colors->d_src_row_color_invariants.at(inv);
+        assert(dst_rows.size() <= src_rows.size());
+        d_output.comment(3) << "inv:" << std::endl;
+        d_colors->print(inv);
+        print_vec(d_output.comment(3) << "   dst:", dst_rows) << std::endl;
+        print_vec(d_output.comment(3) << "   src:", src_rows) << std::endl;
+        for (const auto dst_row : dst_rows)
+            for (size_t src_row = 0; src_row < n; src_row++)
+                if (!contains(src_rows, src_row))
+                    if (try_disallow(src_row, dst_row))
+                        dcount++;
+        if (dst_rows.size() == src_rows.size()) {
+            for (const auto src_row : src_rows)
+                for (size_t dst_row = 0; dst_row < n; dst_row++)
+                    if (!contains(dst_rows, dst_row))
+                        if (try_disallow(src_row, dst_row))
+                            dcount++;
+        }
+    }
+
+    return dcount > 0;
+}
+
+bool LexminSolver::try_disallow(size_t from, size_t to) {
+    const auto rv = d_colors->d_allowed_mapping.disallow(from, to);
+    if (rv) {
+        d_sat->addClause(~d_encoding->perm(from, to));
+        d_statistics.disallowed->inc();
+        comment(4) << "disallowed " << from << "->" << to << endl;
+    }
+    return rv;
+}
 bool LexminSolver::process_invariant(const InvariantVector &invv,
                                      size_t current_row) {
     auto &info = d_invariants.get(invv);

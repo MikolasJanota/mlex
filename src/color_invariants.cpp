@@ -11,17 +11,34 @@
 #include <map>
 #include <set>
 
+void ColorInvariantCalculator::print_node_invariant(
+    size_t node, const std::vector<size_t> &inv) const {
+    assert(inv.size() == d_node_invariant_size);
+    assert(inv.size() == d_color_count + 3);
+    d_output.comment(3) << d_row << "." << node << ":[";
+    for (size_t i = 0; i < d_color_count; ++i)
+        d_output.ccomment(3) << (i ? " " : "") << "C" << i << ":" << inv[i];
+    d_output.ccomment(3) << "|NC" << inv[d_color_count];
+    d_output.ccomment(3) << "|MC" << inv[d_color_count + 1];
+    d_output.ccomment(3) << "|" << inv[d_color_count + 2];
+    d_output.ccomment(3) << "]" << std::endl;
+}
+
 void ColorInvariantCalculator::calculate() {
     std::vector<std::vector<size_t>> invariants;
     invariants.resize(d_n, std::vector<size_t>(d_node_invariant_size, 0));
+    print_vec(d_output.comment(3) << d_row << ":", d_values) << std::endl;
     for (size_t i = 0; i < d_n; ++i) {
         const auto next = d_values[i];
-        const auto curr_color = d_colors[i];
         assert(next < d_n);
+        const auto curr_color = d_colors[i];
+        const auto next_color = d_colors[next];
         assert(curr_color < d_color_count);
+        assert(next_color < d_color_count);
         invariants[next][curr_color]++;
-        invariants[i][d_color_count] = curr_color;
-        invariants[i][d_color_count + 1] = (i == d_row) ? 1 : 0;
+        invariants[i][d_color_count] = next_color;
+        invariants[i][d_color_count + 1] = curr_color;
+        invariants[i][d_color_count + 2] = (i == d_row) ? 1 : 0;
     }
     d_invariants.resize(d_n);
     for (size_t i = 0; i < d_n; ++i) {
@@ -29,6 +46,9 @@ void ColorInvariantCalculator::calculate() {
         d_invariants[i] = inv;
         d_frequencies[inv] = 0;
     }
+    if (d_output.d_options.verbose > 2)
+        for (size_t i = 0; i < d_n; ++i)
+            print_node_invariant(i, invariants[i]);
     for (const auto &inv : d_invariants)
         (d_frequencies[inv])++;
 }
@@ -74,8 +94,9 @@ bool ColorInvariantManager::add_row(size_t dst_row,
     if (d_colors_dst.empty())
         build_colors();
 
-    ColorInvariantCalculator srcc(d_color_count, d_colors_src);
+    ColorInvariantCalculator srcc(d_output, d_color_count, d_colors_src);
     d_src_row_color_invariants.clear();
+    d_row_inv_src.clear();
     for (size_t row = 0; row < n; ++row) {
         srcc.set_row(row);
         for (size_t col = 0; col < n; ++col)
@@ -85,10 +106,12 @@ bool ColorInvariantManager::add_row(size_t dst_row,
         d_output.comment(3) << "src row inv:" << row << std::endl;
         print(inv);
         d_src_row_color_invariants[inv].insert(row);
+        d_row_inv_src.push_back(inv);
     }
 
-    ColorInvariantCalculator dstc(d_color_count, d_colors_dst);
+    ColorInvariantCalculator dstc(d_output, d_color_count, d_colors_dst);
     d_dst_row_color_invariants.clear();
+    d_row_inv_dst.clear();
     for (size_t row = 0; row <= dst_row; ++row) {
         dstc.set_row(row);
         for (size_t col = 0; col < n; ++col)
@@ -98,7 +121,9 @@ bool ColorInvariantManager::add_row(size_t dst_row,
         d_output.comment(3) << "dst row inv:" << row << std::endl;
         print(inv);
         d_dst_row_color_invariants[inv].insert(row);
+        d_row_inv_dst.push_back(inv);
     }
+    return true;
 }
 
 void ColorInvariantManager::print(const Invariant &inv) {

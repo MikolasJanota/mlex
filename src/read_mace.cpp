@@ -51,7 +51,7 @@ static void match_char(StreamBuffer &sb, char c) {
     if (rc != c) {
         std::cerr << c << " expected instead of '" << rc << "'" << std::endl;
         std::cerr << "around: \"";
-        for (size_t i = 0; i < 40; i++, ++sb)
+        for (size_t i = 0; i < 40 && *sb != EOF; i++, ++sb)
             std::cerr << static_cast<char>(*sb);
         std::cerr << "\"" << std::endl;
         exit(EXIT_FAILURE);
