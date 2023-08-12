@@ -106,6 +106,12 @@ bool ColorInvariantManager::add_row(size_t dst_row,
                                     const BinaryFunction &table) {
     const auto n = d_table.order();
     assert(n == table.order());
+    d_colors_src.clear();
+    d_colors_dst.clear();
+    d_src_row_color_invariants.clear();
+    d_dst_row_color_invariants.clear();
+    d_row_inv_src.clear();
+    d_row_inv_dst.clear();
     if (d_colors_dst.empty())
         build_colors();
 

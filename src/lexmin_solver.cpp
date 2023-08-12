@@ -465,9 +465,10 @@ void LexminSolver::run_diagonal() {
         // handle the singleton case
         if (dest_corresp.size() == 1) {
             d_statistics.uniqueDiagElem->inc();
-            if (d_fixed.set(src, first(dest_corresp)))
+            if (d_fixed.set(src, first(dest_corresp))) {
                 comment(2) << src << " fixed to " << d_fixed.src2dst(src)
                            << " (diag)" << std::endl;
+            }
         }
     }
 
@@ -734,7 +735,7 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
     const auto n = d_table.order();
     d_output.comment(3) << "match lines:" << src_row << "->" << dst_row << endl;
     if (d_fixed.set(src_row, dst_row)) {
-        comment(2) << src_row << " fixed to " << dst_row << std::endl;
+        comment(2) << src_row << "[col] fixed to " << dst_row << std::endl;
         d_statistics.uniqueColInv->inc();
     }
     ColorInvariantCalculator srcc(d_output, d_colors->d_color_count,
@@ -775,7 +776,7 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
             const auto se = *(src_elems.begin());
             const auto de = *(dst_elems.begin());
             if (d_fixed.set(se, de)) {
-                comment(2) << se << " fixed to " << de << std::endl;
+                comment(2) << se << "[col] fixed to " << de << std::endl;
                 d_statistics.uniqueColInv->inc();
             }
         }
@@ -813,6 +814,16 @@ bool LexminSolver::process_invariant_color(size_t current_row) {
     }
 
     return dcount > 0;
+}
+
+void LexminSolver::allowonly(size_t from, size_t to) {
+    const auto n = d_table.order();
+    for (size_t i = 0; i < n; i++)
+        if (i != to)
+            try_disallow(from, i);
+    for (size_t i = 0; i < n; i++)
+        if (i != from)
+            try_disallow(i, to);
 }
 
 bool LexminSolver::try_disallow(size_t from, size_t to) {
@@ -853,9 +864,11 @@ void LexminSolver::mark_used_rows(const Invariants::Info &info,
     // handle the case of unique original row
     if (info.used == 1) {
         if (d_fixed.set(rows.back(), current_row)) {
-            comment(2) << rows.back() << " fixed to " << current_row
-                       << std::endl;
+            comment(2) << "[inv] " << rows.back() << " fixed to " << current_row
+                       << endl;
             d_statistics.uniqueInv->inc();
+            if (d_colors)
+                allowonly(rows.back(), current_row);
         }
     }
 }
@@ -926,9 +939,12 @@ void LexminSolver::enc_inv_ord() {
         }
         if (block.size() == 1) {
             const auto elem = *block.begin();
-            if (d_fixed.set(elem, range_start))
+            if (d_fixed.set(elem, range_start)) {
                 comment(2) << elem << " fixed to " << d_fixed.src2dst(elem)
                            << " (inv_ord)" << std::endl;
+                if (d_colors)
+                    allowonly(elem, range_start);
+            }
         }
         range_start = range_stop;
     }
@@ -988,11 +1004,9 @@ void LexminSolver::opt1stRow() {
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
         d_fixed.set(some_first_row, 0);
-        if (d_colors) {
-            for (size_t j = 1; j < n; j++)
-                d_colors->d_allowed_mapping.disallow(some_first_row, j);
-        }
         comment(2) << some_first_row << " fixed to 0 (opt1stRow)" << std::endl;
+        if (d_colors)
+            allowonly(some_first_row, 0);
     }
 }
 
