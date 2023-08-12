@@ -785,6 +785,9 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
 bool LexminSolver::process_invariant_color(size_t current_row) {
     const auto n = d_table.order();
     d_colors->add_row(current_row, *(d_fixed_cells.get()));
+    if (static_cast<int>(d_colors->d_color_count) > d_statistics.maxCol->get())
+        d_statistics.maxCol->set(d_colors->d_color_count);
+
     size_t dcount = 0;
     for (const auto &[inv, dst_rows] : d_colors->d_dst_row_color_invariants) {
         const auto &src_rows = d_colors->d_src_row_color_invariants.at(inv);

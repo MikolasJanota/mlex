@@ -20,6 +20,7 @@ class StatisticsManager {
         all.push_back(fixedElements = new IntStatistic("fixed elements"));
         all.push_back(disallowed = new IntStatistic("disallowed mappings"));
         all.push_back(uniqueInv = new IntStatistic("unique by invariants"));
+        all.push_back(maxCol = new IntStatistic("maximum color"));
         all.push_back(uniqueColInv =
                           new IntStatistic("unique by col invariants"));
         all.push_back(uniqueDiag1Elem =
@@ -79,6 +80,7 @@ class StatisticsManager {
             : Statistic{name}, d_val{init_value} {};
         int inc() { return ++d_val; }
         int get() const { return d_val; }
+        void set(int v) { d_val = v; }
 
         virtual bool should_print() const override { return d_val != 0; }
 
@@ -99,6 +101,7 @@ class StatisticsManager {
     IntStatistic *uniqueDiag1Elem;
     IntStatistic *uniqueInv;
     IntStatistic *uniqueColInv;
+    IntStatistic *maxCol;
     IntStatistic *producedModels;
     IntStatistic *readModels;
     DoubleStatistic *encodingTime;
