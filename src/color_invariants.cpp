@@ -24,10 +24,10 @@ void ColorInvariantCalculator::print_node_invariant(
     d_output.ccomment(3) << "]" << std::endl;
 }
 
-void ColorInvariantCalculator::calculate() {
-    std::vector<std::vector<size_t>> invariants;
+void ColorInvariantCalculator::make_invariants(
+    std::vector<std::vector<size_t>> &invariants) {
+    invariants.clear();
     invariants.resize(d_n, std::vector<size_t>(d_node_invariant_size, 0));
-    print_vec(d_output.comment(3) << d_row << ":", d_values) << std::endl;
     for (size_t i = 0; i < d_n; ++i) {
         const auto next = d_values[i];
         assert(next < d_n);
@@ -40,6 +40,21 @@ void ColorInvariantCalculator::calculate() {
         invariants[i][d_color_count + 1] = curr_color;
         invariants[i][d_color_count + 2] = (i == d_row) ? 1 : 0;
     }
+}
+
+void ColorInvariantCalculator::make_map(InvMap &inv_map) {
+    std::vector<std::vector<size_t>> invariants;
+    make_invariants(invariants);
+    for (size_t i = 0; i < d_n; ++i) {
+        const auto inv = InvariantVector(invariants[i]);
+        inv_map[inv].insert(i);
+    }
+}
+
+void ColorInvariantCalculator::calculate() {
+    std::vector<std::vector<size_t>> invariants;
+    make_invariants(invariants);
+    print_vec(d_output.comment(3) << d_row << ":", d_values) << std::endl;
     d_invariants.resize(d_n);
     for (size_t i = 0; i < d_n; ++i) {
         const auto inv = InvariantVector(invariants[i]);

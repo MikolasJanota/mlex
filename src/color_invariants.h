@@ -23,6 +23,10 @@ class ColorInvariantCalculator {
                                ImmutableVector_hash<size_t>,
                                ImmutableVector_equal<size_t>>
         InvHistogram;
+    typedef std::unordered_map<InvariantVector, std::set<size_t>,
+                               ImmutableVector_hash<size_t>,
+                               ImmutableVector_equal<size_t>>
+        InvMap;
 
     ColorInvariantCalculator(Output &output, size_t color_count,
                              const std::vector<size_t> &colors)
@@ -49,9 +53,13 @@ class ColorInvariantCalculator {
 
     InvHistogram inv() { return d_frequencies; };
 
+    void make_map(InvMap &inv_map);
+
   protected:
     Output &d_output;
     const size_t d_n;
+
+    void make_invariants(std::vector<std::vector<size_t>> &invariants);
 
     // number of colors we are currently using
     const size_t d_color_count;
@@ -114,7 +122,7 @@ struct ColorInvariantManager {
     const BinaryFunction &d_table;
 
     size_t d_color_count = 0;
-    ;
+
     std::vector<size_t> d_colors_src;
     std::vector<size_t> d_colors_dst;
     InvMap d_src_row_color_invariants;

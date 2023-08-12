@@ -730,6 +730,45 @@ size_t LexminSolver::get_val(size_t row, size_t col) const {
     return d_last_permutation[val];
 }
 
+void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
+    const auto n = d_table.order();
+    d_output.comment(3) << "match lines:" << src_row << "->" << dst_row << endl;
+    ColorInvariantCalculator srcc(d_output, d_colors->d_color_count,
+                                  d_colors->d_colors_src);
+    srcc.set_row(src_row);
+    for (size_t col = 0; col < n; ++col)
+        srcc.set_val(col, d_table.get(src_row, col));
+    ColorInvariantCalculator::InvMap src_map;
+    srcc.make_map(src_map);
+
+    ColorInvariantCalculator dstc(d_output, d_colors->d_color_count,
+                                  d_colors->d_colors_dst);
+    dstc.set_row(dst_row);
+    for (size_t col = 0; col < n; ++col)
+        dstc.set_val(col, d_fixed_cells->get(dst_row, col));
+    ColorInvariantCalculator::InvMap dst_map;
+    dstc.make_map(dst_map);
+    size_t dcount = 0;
+
+    for (const auto &[inv, dst_elems] : dst_map) {
+        const auto &src_elems = src_map.at(inv);
+        print_vec(d_output.comment(3) << "inv:", inv) << std::endl;
+        print_vec(d_output.comment(3) << "   dst:", dst_elems) << std::endl;
+        print_vec(d_output.comment(3) << "   src:", src_elems) << std::endl;
+        assert(src_elems.size() == dst_elems.size());
+        for (const auto dst_elem : dst_elems)
+            for (size_t src_elem = 0; src_elem < n; src_elem++)
+                if (!contains(src_elems, src_elem))
+                    if (try_disallow(src_elem, dst_elem))
+                        dcount++;
+        for (const auto src_elem : src_elems)
+            for (size_t dst_elem = 0; dst_elem < n; dst_elem++)
+                if (!contains(dst_elems, dst_elem))
+                    if (try_disallow(src_elem, dst_elem))
+                        dcount++;
+    }
+}
+
 bool LexminSolver::process_invariant_color(size_t current_row) {
     const auto n = d_table.order();
     d_colors->add_row(current_row, *(d_fixed_cells.get()));
@@ -752,6 +791,8 @@ bool LexminSolver::process_invariant_color(size_t current_row) {
                     if (!contains(dst_rows, dst_row))
                         if (try_disallow(src_row, dst_row))
                             dcount++;
+            if (dst_rows.size() == 1)
+                match_lines_color(*src_rows.begin(), *dst_rows.begin());
         }
     }
 
