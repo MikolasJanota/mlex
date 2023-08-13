@@ -101,6 +101,7 @@ class LexminSolver : public LexminSolverBase {
     bool try_disallow(size_t from, size_t to);
     void allowonly(size_t from, size_t to);
     bool process_invariant_color(size_t current_row);
+    bool core_process_invariant_color(size_t current_row);
     void match_lines_color(size_t src_row, size_t dst_row);
 
     /* find a value for a given cell */

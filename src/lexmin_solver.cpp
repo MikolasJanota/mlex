@@ -733,9 +733,10 @@ size_t LexminSolver::get_val(size_t row, size_t col) const {
 
 void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
     const auto n = d_table.order();
-    d_output.comment(3) << "match lines:" << src_row << "->" << dst_row << endl;
+    d_output.comment(2) << "[col] match lines:" << src_row << "->" << dst_row
+                        << endl;
     if (d_fixed.set(src_row, dst_row)) {
-        comment(2) << src_row << "[col] fixed to " << dst_row << std::endl;
+        comment(2) << "[col] " << src_row << " fixed to " << dst_row << endl;
         d_statistics.uniqueColInv->inc();
     }
     ColorInvariantCalculator srcc(d_output, d_colors->d_color_count,
@@ -784,6 +785,16 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
 }
 
 bool LexminSolver::process_invariant_color(size_t current_row) {
+    size_t old = -1;
+    bool changed = false;
+    do {
+        old = d_colors->d_color_count;
+        changed |= core_process_invariant_color(current_row);
+    } while (0 && d_colors->d_color_count != old);
+    return changed;
+}
+
+bool LexminSolver::core_process_invariant_color(size_t current_row) {
     const auto n = d_table.order();
     d_colors->add_row(current_row, *(d_fixed_cells.get()));
     if (static_cast<int>(d_colors->d_color_count) > d_statistics.maxCol->get())
