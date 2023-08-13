@@ -777,7 +777,7 @@ void LexminSolver::match_lines_color(size_t src_row, size_t dst_row) {
             const auto se = *(src_elems.begin());
             const auto de = *(dst_elems.begin());
             if (d_fixed.set(se, de)) {
-                comment(2) << se << "[col] fixed to " << de << std::endl;
+                comment(2) << "[col] " << se << " fixed to " << de << endl;
                 d_statistics.uniqueColInv->inc();
             }
         }
