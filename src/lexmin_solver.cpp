@@ -605,12 +605,12 @@ void LexminSolver::solve() {
         if (row + 1 < n) {
             if (d_fixed.is_fixed_dst(row))
                 id_row_elements(row, d_fixed.dst2src(row));
+            if (d_options.color)
+                process_invariant_color(row);
             if (fixed_before != d_fixed.fixed_count() && d_fixed_cells)
                 closure_fixed();
             if (update_budgets && budgeting)
                 calculate_budgets_row_tot();
-            if (d_options.color)
-                process_invariant_color(row);
         }
     }
     d_is_solved = true;
