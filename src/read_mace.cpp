@@ -11,47 +11,53 @@
 #include <iostream>
 #include <vector>
 
-#include "fmtutils.hh"
-
 ReadMace::ReadMace(Output &output, gzFile &input_file)
     : d_output(output), d_input_file(input_file), d_in(d_input_file) {}
 
-static void skip(StreamBuffer &sb) {
+static void skip(Reader &sb) {
     while (1) {
-        skipWhitespace(sb);
+        sb.skip_whitespace();
         if (*sb == '%')
-            skipLine(sb);
+            sb.skip_line();
         else
             break;
     }
 }
 
-static void match_string(StreamBuffer &sb, const char *s) {
+static int parse_int(Reader &sb) {
+    skip(sb);
+    return sb.parse_int();
+}
+
+static void match_string(Reader &sb, const char *s) {
     skip(sb);
     const auto olds = s;
     for (; *s; ++sb, s++) {
         if (*sb == EOF) {
-            std::cerr << "End of file when looking for '" << olds << "'."
+            std::cerr << sb.get_line_number()
+                      << ":End of file when looking for '" << olds << "'."
                       << std::endl;
             exit(EXIT_FAILURE);
         }
         const char rc = *sb;
         if (rc != *s) {
-            std::cerr << "Unexpected character '" << rc
-                      << "' when looking for '" << *s << "' in " << olds << "'."
-                      << std::endl;
+            std::cerr << sb.get_line_number() << ":Unexpected character '" << rc
+                      << "' when looking for '" << *s << "' in '" << olds
+                      << "'." << std::endl;
             exit(EXIT_FAILURE);
         }
     }
 }
 
-static void match_char(StreamBuffer &sb, char c) {
+static void match_char(Reader &sb, char c) {
     skip(sb);
     const char rc = *sb;
     if (rc != c) {
-        std::cerr << c << " expected instead of '" << rc << "'" << std::endl;
+        std::cerr << sb.get_line_number() << ":expected '" << c
+                  << "' instead of '" << static_cast<char>(*sb) << "'"
+                  << std::endl;
         std::cerr << "around: \"";
-        for (size_t i = 0; i < 40 && *sb != EOF; i++, ++sb)
+        for (size_t i = 0; i < 10 && *sb != EOF; i++, ++sb)
             std::cerr << static_cast<char>(*sb);
         std::cerr << "\"" << std::endl;
         exit(EXIT_FAILURE);
@@ -59,7 +65,7 @@ static void match_char(StreamBuffer &sb, char c) {
     ++sb;
 }
 
-static void match_chars(StreamBuffer &sb, const char *s) {
+static void match_chars(Reader &sb, const char *s) {
     while (*s != '\0') {
         match_char(sb, *s);
         s++;
@@ -73,7 +79,7 @@ size_t ReadMace::read(int max) {
     while (skip(d_in), *d_in != EOF && max--) {
         match_string(d_in, "interpretation");
         match_char(d_in, '(');
-        const auto i = parseInt(d_in);
+        const auto i = parse_int(d_in);
         if (i < 1) {
             std::cerr << "invalid order " << i << std::endl;
             exit(EXIT_FAILURE);
@@ -108,7 +114,7 @@ size_t ReadMace::read(int max) {
         match_chars(d_in, "(_,_),[");
         for (size_t i = 0; i < order; i++) {
             for (size_t j = 0; j < order; j++) {
-                const auto val = parseInt(d_in);
+                const auto val = parse_int(d_in);
                 if (val < 0 || val >= static_cast<int>(order)) {
                     std::cerr << "value '" << val << "' out of range"
                               << std::endl;

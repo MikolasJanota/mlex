@@ -19,7 +19,7 @@ class UnionFind {
     }
 
     T get_repr(const T &a) const {
-        T repr;
+        T repr{};
         VERIFY(find(a, repr));
         return repr;
     }

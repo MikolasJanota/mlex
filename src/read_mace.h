@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "binary_function.h"
-#include "fmtutils.hh"
+#include "reader.h"
 #include "options.h"
 
 class ReadMace {
@@ -27,6 +27,6 @@ class ReadMace {
   private:
     Output &d_output;
     gzFile &d_input_file;
-    StreamBuffer d_in;
+    Reader d_in;
     std::vector<std::unique_ptr<BinaryFunction>> d_functions;
 };

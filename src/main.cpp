@@ -437,6 +437,8 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
 
         if (options.verbose > 3)
             f.print(cout, options.comment_prefix);
+
+        // Running the solver
         std::unique_ptr<LexminSolverBase> solver(make_solver(output, f));
 
         if (dgs) {

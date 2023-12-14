@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "binary_function.h"
-#include "fmtutils.hh"
+#include "reader.h"
 #include "options.h"
 
 class ReadDiags {
@@ -25,7 +25,7 @@ class ReadDiags {
   private:
     Output &d_output;
     gzFile &d_input_file;
-    StreamBuffer d_in;
+    Reader d_in;
     std::vector<std::vector<size_t>> d_diags;
     bool d_open = false;
     bool d_closed = false;

@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "binary_function.h"
-#include "fmtutils.hh"
+#include "reader.h"
 #include "options.h"
 #include <memory>
 #include <vector>
@@ -16,7 +16,11 @@ class ReadGAP {
   public:
     explicit ReadGAP(Output &output, gzFile &input_file);
     virtual ~ReadGAP() = default;
+
+    /* Read at most max models. */
     size_t read(int max);
+
+    /* Clear whatever has been read so far. */
     void clear() { d_functions.clear(); }
 
     const std::vector<std::unique_ptr<BinaryFunction>> &functions() const {
@@ -26,7 +30,7 @@ class ReadGAP {
   private:
     Output &d_output;
     gzFile &d_input_file;
-    StreamBuffer d_in;
+    Reader d_in;
     bool d_open = false;
     bool d_closed = false;
     std::vector<std::unique_ptr<BinaryFunction>> d_functions;

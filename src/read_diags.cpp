@@ -13,23 +13,12 @@
 #include <iostream>
 #include <vector>
 
-#include "fmtutils.hh"
-
 ReadDiags::ReadDiags(Output &output, gzFile &input_file)
     : d_output(output), d_input_file(input_file), d_in(d_input_file) {}
 
-static void skip(StreamBuffer &sb) {
-    skipWhitespace(sb);
-    /* while (1) { */
-    /*     skipWhitespace(sb); */
-    /*     if (*sb == '%') */
-    /*         skipLine(sb); */
-    /*     else */
-    /*         break; */
-    /* } */
-}
+static void skip(Reader &sb) { sb.skip_whitespace(); }
 
-static void match_string(StreamBuffer &sb, const char *s) {
+static void match_string(Reader &sb, const char *s) {
     skip(sb);
     const auto olds = s;
     for (; *s; ++sb, s++) {
@@ -48,12 +37,12 @@ static void match_string(StreamBuffer &sb, const char *s) {
     }
 }
 
-static int check_next_char(StreamBuffer &sb) {
+static int check_next_char(Reader &sb) {
     skip(sb);
     return *sb;
 }
 
-static void match_char(StreamBuffer &sb, char c) {
+static void match_char(Reader &sb, char c) {
     skip(sb);
     const char rc = *sb;
     if (rc != c) {
@@ -95,7 +84,7 @@ size_t ReadDiags::read(int max) {
         while (skip(d_in), *d_in != ']') {
             if (!diag.empty())
                 match_char(d_in, ',');
-            const auto i = parseInt(d_in);
+            const auto i = d_in.parse_int();
             diag.push_back(i - 1);
         }
         d_diags.push_back(diag);
@@ -108,7 +97,7 @@ size_t ReadDiags::read(int max) {
             while (check_next_char(d_in) != ')') {
                 if (cyc_size++ > 0)
                     match_char(d_in, ',');
-                parseInt(d_in);
+                d_in.parse_int();
             }
             match_char(d_in, ')');
         }
