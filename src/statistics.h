@@ -17,6 +17,8 @@ class StatisticsManager {
         all.push_back(producedModels = new IntStatistic("produced models"));
         all.push_back(readModels = new IntStatistic("read models"));
         all.push_back(unique1stRow = new IntStatistic("unique 1st row"));
+        all.push_back(unique1stRowFirst =
+                          new IntStatistic("unique 1st row is the first row"));
         all.push_back(fixedElements = new IntStatistic("fixed elements"));
         all.push_back(disallowed = new IntStatistic("disallowed mappings"));
         all.push_back(uniqueInv = new IntStatistic("unique by invariants"));
@@ -93,6 +95,7 @@ class StatisticsManager {
     };
     IntStatistic *satCalls;
     IntStatistic *unique1stRow;
+    IntStatistic *unique1stRowFirst;
     IntStatistic *fixedElements;
     IntStatistic *disallowed;
     IntStatistic *uniqueDiagElem;

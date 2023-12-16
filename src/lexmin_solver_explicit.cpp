@@ -197,6 +197,8 @@ void LexminSolverExplicit::opt1stRow() {
     // handle the case of unique first row
     if (count_can_be_first == 1) {
         d_statistics.unique1stRow->inc();
+        if (some_first_row == 0)
+            d_statistics.unique1stRowFirst->inc();
         comment(2) << some_first_row << " fixed to 0 (opt1stRow)" << std::endl;
     }
 }

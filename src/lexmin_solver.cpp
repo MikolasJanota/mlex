@@ -1018,6 +1018,8 @@ void LexminSolver::opt1stRow() {
         comment(2) << some_first_row << " fixed to 0 (opt1stRow)" << std::endl;
         if (d_colors)
             allowonly(some_first_row, 0);
+        if (some_first_row == 0)
+            d_statistics.unique1stRowFirst->inc();
     }
 }
 

@@ -246,9 +246,9 @@ static void process_table_plain(Output &output, const BinaryFunction &table,
     solution->set_name(table.get_name());
     solution->set_additional_info(table.get_additional_info());
     if (options.mace_format)
-        solution->print_mace(cout) << endl;
+        solution->print_mace(cout);
     else
-        solution->print_gap(cout) << endl;
+        solution->print_gap(cout);
 }
 
 static void process_table_trie(
@@ -282,9 +282,9 @@ static void process_table_ht(Output &output, const BinaryFunction &table,
         return;
     }
     if (options.mace_format)
-        sol.print_mace(cout, table.get_additional_info()) << endl;
+        sol.print_mace(cout, table.get_additional_info());
     else
-        sol.print_gap(cout) << endl;
+        sol.print_gap(cout);
     statistics.producedModels->inc();
 }
 
@@ -300,18 +300,12 @@ process_tables(Output &output,
     const auto use_trie = options.unique && !options.use_hash_table;
 
     for (const auto &table : tables) {
+        if (counter && !use_trie) {
+            if (!options.mace_format)
+                std::cout << ',';
+            std::cout << std::endl;
+        }
         statistics.readModels->inc();
-        /* if (counter && (counter % 1000) == 0) { */
-        /*     if (options.verbose == 0) { */
-        /*         (output.ccomment() */
-        /*          << " " << counter << " (" */
-        /*          << SHOW_TIME0(read_cpu_time() - start_time) << "s)") */
-        /*             .flush(); */
-        /*     } else { */
-        /*         output.comment() << "done: " << counter << std::endl; */
-        /*     } */
-        /* } */
-
         output.comment(1) << "solving " << table->get_name()
                           << " order:" << table->order() << " "
                           << table->get_additional_info() << std::endl;
@@ -388,7 +382,15 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
     std::unique_ptr<HT> ht(use_ht ? new HT() : nullptr);
     std::vector<std::unique_ptr<BinaryFunction>> unique_solutions;
 
+    const auto one_by_one_prn = !options.graph && !options.print && !use_trie;
+    if (one_by_one_prn && !options.mace_format)
+        std::cout << '[' << std::endl;
     for (size_t cnt = 0; read(output, reader, 1) > 0; ++cnt) {
+        if (one_by_one_prn && cnt) {
+            if (!options.mace_format)
+                std::cout << ',';
+            std::cout << std::endl;
+        }
         statistics.readModels->inc();
         if (reader.functions().empty()) {
             cerr << "Function not read" << endl;
@@ -458,6 +460,11 @@ static void solve_more_gaps(Output &output, ReadGAP &reader, ReadDiags *dgs) {
         }
         reader.clear();
         cnt++;
+    }
+    if (one_by_one_prn) {
+        std::cout << std::endl;
+        if (!options.mace_format)
+            std::cout << ']' << std::endl;
     }
 }
 
