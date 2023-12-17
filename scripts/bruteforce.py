@@ -67,7 +67,7 @@ def prn_perm(pi):
 def solve(g):
     rng = range(len(g))
     m = copy.deepcopy(g)
-    best_pi = None
+    best_pi = [i for i in rng]
     updates = 0
     for pi in permutations(rng):
         pi1 = inv(pi)
