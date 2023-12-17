@@ -6,16 +6,25 @@
 # Copyright (C) 2023, Mikolas Janota
 #
 #
+#
+SOLVER=../build/mlex
+
+if ! ( which `cut <<<${SOLVER} -f1 -d\ ` >/dev/null 2>&1 ) ; then
+    echo "Looks like $SOLVER can't be run."
+    exit 300
+fi
 
 TMPF=/tmp/${RANDOM}.gap
-ls ../tests/*.gap | grep -v '_min\.gap' |\
+TMPF1=/tmp/${RANDOM}.gap
+ls ../tests/*.gap.gz | grep -v '_min\.gap.gz' |\
   while read F;  do
     echo $F
-    ../build/mlex $F | ./reformat.py >$TMPF
-    if diff ${F%.gap}_min.gap $TMPF; then
+    $SOLVER $F | ./reformat.py >$TMPF
+    zcat ${F%.gap.gz}_min.gap.gz >$TMPF1
+    if diff $TMPF1 $TMPF; then
       echo okay
     else
       echo KO
     fi
   done
-rm -f $TMPF
+rm -f $TMPF $TMPF1
