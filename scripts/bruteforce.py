@@ -7,6 +7,7 @@ from itertools import permutations
 import ast
 import sys
 import copy
+update_list = []
 
 def inv(pi):
     rv = [-1] * len(pi)
@@ -47,14 +48,36 @@ def cmp(orig, ming, pi, pi1):
                 return +1
     return 0
 
+def prn_perm(pi):
+    ord = len(pi)
+    seen = set()
+    rv = ''
+    for i in range(ord):
+        if i in seen:
+            continue
+        cy = []
+        v = i
+        while v not in seen:
+            seen.add(v)
+            cy.append(v+1)
+            v = pi[v]
+        rv += '(' + ' '.join(map(str, cy)) + ')'
+    return rv
+
 def solve(g):
     rng = range(len(g))
     m = copy.deepcopy(g)
+    best_pi = None
+    updates = 0
     for pi in permutations(rng):
         pi1 = inv(pi)
         if cmp(g, m, pi, pi1) < 0:
             m = perm(g, pi, pi1)
+            best_pi = copy.deepcopy(pi)
+            updates += 1
     prn(m)
+    update_list.append(updates)
+    return best_pi
 
 def run_main():
     gs = ast.literal_eval(sys.stdin.read())
@@ -63,10 +86,15 @@ def run_main():
         for rx,r in enumerate(g):
             for cx,c in enumerate(r):
                r[cx]-=1
-        solve(g)
+        pi = solve(g)
         if i+1 < len(gs):
-           print(',')
-    print('\n]')
+           print(',', flush=True)
+        else:
+           print(flush=True)
+        print(f"# updates: {update_list[-1]}", file=sys.stderr, flush=True)
+        print(f"# pi: {prn_perm(pi)}")
+    print(']')
+    print(f"avg updates: {sum(update_list)/len(update_list)}", file=sys.stderr)
 
 if __name__ == "__main__":
     sys.exit(run_main())
