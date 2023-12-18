@@ -5,6 +5,7 @@
 # Copyright (C) 2023, Mikolas Janota
 from itertools import permutations
 from statistics import mean
+import argparse
 import ast
 import sys
 import copy
@@ -69,9 +70,21 @@ def prn_perm(pi):
         rv += '(' + ' '.join(map(str, cy)) + ')'
     return rv
 
-def solve(g):
-    """ Find the smallest isomorphic copy of g. """
+def count_equal(g, ming):
+    """ Count how many permutations turn g into ming. """
+    assert(len(g) == len(ming))
     rng = range(len(g))
+    rv = 0
+    for pi in permutations(rng):
+        pi1 = inv(pi)
+        if cmp(g, ming, pi, pi1) == 0:
+            rv += 1
+    return rv
+
+def solve(args, g):
+    """ Find the smallest isomorphic copy of g. """
+    ord = len(g)
+    rng = range(ord)
     m = copy.deepcopy(g)
     best_pi = [i for i in rng]
     updates, last = 0,0
@@ -83,24 +96,41 @@ def solve(g):
             best_pi = copy.deepcopy(pi)
             updates += 1
     prn(m)
-    return updates, last, best_pi
+    solutions = count_equal(g, m) if args.count else -1
+    return updates, last, best_pi, solutions
 
 def run_main():
+    arg_parser = argparse.ArgumentParser(description='Bruteforce solution for the minlex problem.')
+    arg_parser.add_argument('-c', '--count', default=False, action='store_true')
+    arg_parser.add_argument('filename', default='-', nargs='?')
+    args = arg_parser.parse_args()
+
+    if args.filename == '-':
+        input = sys.stdin.read()
+    else:
+        with open(args.filename, 'r') as inf:
+            input = inf.read()
+
     updates_list = []
     last_list = []
-    gs = ast.literal_eval(sys.stdin.read())
+    gs = ast.literal_eval(input)
     print('[')
     for i,g in enumerate(gs):
+        ord=len(g)
+        print(f"# order: {ord}")
         for rx,r in enumerate(g):
             for cx,c in enumerate(r):
                r[cx]-=1
-        updates, last, pi = solve(g)
+               assert(0 <= r[cx] < ord)
+        updates, last, pi, solutions = solve(args, g)
         if i+1 < len(gs):
            print(',', flush=True)
         else:
            print(flush=True)
         print(f"# updates: {updates}", flush=True)
         print(f"# pi {last}: {prn_perm(pi)}")
+        if args.count:
+           print(f"# solutions: {solutions}")
         updates_list.append(updates)
         last_list.append(last)
     print(']')
