@@ -1,64 +1,70 @@
 #!/usr/bin/env python3
+""" Small utility to convert MACE format to GAP format. """
+
 # File:  mace2gap.py
 # Author:  mikolas
 # Created on:  Sun Dec 17 22:37:48 CET 2023
 # Copyright (C) 2023, Mikolas Janota
 import sys
-import ast
+
 
 def prn(g):
-    print('[', end='')
-    ord=len(g)
-    for rx,r in enumerate(g):
-        print(f"{' ' if rx > 0 else ''}[", end='')
-        for cx,c in enumerate(r):
-            print(f"{',' if cx > 0 else ''}{c}", end='')
-        print(']', end='')
-        if rx+1<ord:
-           print(',')
-    print(']', end='')
+    """Pretty-print a binary table."""
+    print("[", end="")
+    order = len(g)
+    for rx, r in enumerate(g):
+        print(f"{' ' if rx > 0 else ''}[", end="")
+        for cx, c in enumerate(r):
+            print(f"{',' if cx > 0 else ''}{c}", end="")
+        print("]", end="")
+        if rx + 1 < order:
+            print(",")
+    print("]", end="")
+
 
 def read():
+    """Read tables on stdin."""
     gs = []
-    for l in sys.stdin:
-        l = l.strip()
-        if not l:
+    for ln in sys.stdin:
+        ln = ln.strip()
+        if not ln:
             continue
-        if l.startswith('interpretation'):
+        if ln.startswith("interpretation"):
             continue
-        if l.startswith('function'):
+        if ln.startswith("function"):
             g = []
-            ord = None
+            order = None
             continue
-        last = l.endswith(' ])]).')
+        last = ln.endswith(" ])]).")
         if last:
-            l = l.split()[0].strip()
+            ln = ln.split()[0].strip()
         else:
-            assert l.endswith(',')
-            l = l[:-1]
+            assert ln.endswith(",")
+            ln = ln[:-1]
 
-        row = [x+1 for x in map(int,l.split(','))]
-        if ord is None:
-            ord = len(row)
-        else:
-            assert len(row) == ord
-        assert all(map(lambda x: 1<=x<=ord, row))
+        row = [x + 1 for x in map(int, ln.split(","))]
+        if order is None:
+            order = len(row)
+        assert len(row) == order
+        assert all(map(lambda x: 1 <= x <= order, row))
         g.append(row)
         if last:
-            assert len(g) == ord
+            assert len(g) == order
             gs.append(g)
             g = None
     return gs
 
 
 def run_main():
+    """Run the whole program."""
     gs = read()
-    print('[')
-    for i,g in enumerate(gs):
+    print("[")
+    for i, g in enumerate(gs):
         prn(g)
-        if i+1 < len(gs):
-           print(',', flush=True)
-    print('\n]', flush=True)
+        if i + 1 < len(gs):
+            print(",", flush=True)
+    print("\n]", flush=True)
+
 
 if __name__ == "__main__":
     sys.exit(run_main())
