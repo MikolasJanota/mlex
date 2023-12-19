@@ -162,8 +162,8 @@ class RowBudgeter : public IBudget {
 };
 
 LexminSolver::LexminSolver(Output &output, const BinaryFunction &table)
-    : LexminSolverBase(output, table), d_fixed(output, table.order()),
-      d_invariants(output, table) {}
+    : LexminSolverBase(output, table), d_partial_mapping(table.order()),
+      d_fixed(output, table.order()), d_invariants(output, table) {}
 
 LexminSolver::~LexminSolver() {}
 
@@ -202,6 +202,7 @@ size_t LexminSolver::find_value_bin2(Encoding::Assignment &asg, IBudget &budget,
                                      const std::optional<size_t> &last_val) {
     const auto n = d_table.order();
     auto &[row, col, cur_val] = asg;
+    assert(d_table.is_set(row, col));
     const auto cell = std::make_pair<>(row, col);
 
     TRACE(comment(3) << "(" << row << " " << col << ") :";);
@@ -500,6 +501,10 @@ void LexminSolver::solve() {
     const auto n = d_table.order();
     const auto budgeting = d_options.budgeting;
     d_used.resize(n, false);
+    d_sat = std::make_unique<SATSPC::MiniSatExt>();
+    d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
+
+    calculate_partial();
 
     if (d_options.diagonal || d_options.opt1stRow || d_options.id_elements)
         d_fixed_cells = std::make_unique<BinaryFunction>(n);
@@ -513,8 +518,6 @@ void LexminSolver::solve() {
         d_colors = std::make_unique<ColorInvariantManager>(d_output, d_table);
     }
 
-    d_sat = std::make_unique<SATSPC::MiniSatExt>();
-    d_encoding = std::make_unique<Encoding>(d_output, *d_sat, d_table);
     if (d_options.opt1stRow && !d_options.diagonal)
         opt1stRow();
     if (d_options.inv_ord)
@@ -559,6 +562,8 @@ void LexminSolver::solve() {
 
         RowBudgeter budgeter(d_budgets.get(), !d_budgets);
         for (size_t col = 0; col < n; col++) {
+            if (!d_table.is_set(row, col))
+                continue;
             budgeter.set_col(col);
             d_assignments.push_back({row, col, 0});
             const auto cur_val =
@@ -1149,6 +1154,25 @@ BinaryFunction *LexminSolver::make_solution() {
     for (const auto &[row, col, val] : d_assignments)
         solution->set(row, col, val);
     return solution;
+}
+
+void LexminSolver::calculate_partial() {
+    const auto n = d_table.order();
+    for (size_t i = 0; i < n; i++)
+        for (size_t j = 0; j < n; j++) {
+            if (i == j)
+                continue;
+            bool diff = false; // i->j changes definedness
+            for (size_t k = 0; k < n && !diff; k++)
+                diff = (d_table.is_set(i, k) != d_table.is_set(j, k)) ||
+                       (d_table.is_set(k, i) != d_table.is_set(k, j));
+            if (diff) {
+                comment(3) << "[partial] disallow:" << i << "->" << j
+                           << std::endl;
+                d_partial_mapping.disallow(i, j);
+                d_sat->addClause(~d_encoding->perm(i, j));
+            }
+        }
 }
 
 CompFunction LexminSolver::make_solution_comp() {

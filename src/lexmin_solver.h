@@ -54,6 +54,7 @@ class LexminSolver : public LexminSolverBase {
     }
 
   private:
+    AllowedMapping d_partial_mapping;
     std::vector<size_t> d_diag;
 
     std::unique_ptr<SATSPC::MiniSatExt> d_sat;
@@ -81,6 +82,8 @@ class LexminSolver : public LexminSolverBase {
     void opt1stRow();
 
     void enc_inv_ord();
+
+    void calculate_partial();
 
     void calculate_budgets_row_tot();
     void calculate_budgets_col();

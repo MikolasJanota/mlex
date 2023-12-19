@@ -54,6 +54,8 @@ void Encoding::encode_shot(const std::pair<size_t, size_t> &cell,
     auto &ls = _encoding_pos_ls;
     if (row == col) {
         for (size_t e = 0; e < n; e++) {
+            if (!d_table.is_set(e, e))
+                continue;
             ls.clear();
             ls.push(~perm(e, row));
             const auto old_val = d_table.get(e, e);
@@ -76,6 +78,8 @@ void Encoding::encode_shot(const std::pair<size_t, size_t> &cell,
         for (size_t dom_row = 0; dom_row < n; dom_row++)
             for (size_t dom_col = 0; dom_col < n; dom_col++) {
                 if (dom_col == dom_row)
+                    continue;
+                if (!d_table.is_set(dom_row, dom_col))
                     continue;
                 ls.clear();
                 ls.push(~perm(dom_row, row));
@@ -110,6 +114,8 @@ void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
     auto &ls = _encoding_pos_ls;
     if (row == col) {
         for (size_t e = 0; e < n; e++) {
+            if (!d_table.is_set(e, e))
+                continue;
             const auto old_val = d_table.get(e, e);
             if (old_val == e && row == val)
                 continue; // tautology
@@ -126,6 +132,8 @@ void Encoding::encode_pos(const Assignment &assignment, SATSPC::Lit selector) {
         for (size_t dom_row = 0; dom_row < n; dom_row++)
             for (size_t dom_col = 0; dom_col < n; dom_col++) {
                 if (dom_col == dom_row)
+                    continue;
+                if (!d_table.is_set(dom_row, dom_col))
                     continue;
                 const auto old_val = d_table.get(dom_row, dom_col);
                 if ((old_val == dom_row && val == row) ||

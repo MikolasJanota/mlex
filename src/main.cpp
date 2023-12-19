@@ -322,6 +322,9 @@ process_tables(Output &output,
         }
         counter++;
     }
+    if (counter && !use_trie) {
+        std::cout << std::endl;
+    }
 }
 
 static int read(Output &output, ReadMace &reader, int max_read) {

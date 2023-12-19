@@ -48,7 +48,10 @@ std::ostream &BinaryFunction::print_mace(std::ostream &output) const {
         for (size_t col = 0; col < n; col++) {
             if (col)
                 output << ",";
-            output << get(row, col);
+            if (is_set(row, col))
+                output << get(row, col);
+            else
+                output << -1;
         }
         if (row + 1 < n)
             output << "," << std::endl;
