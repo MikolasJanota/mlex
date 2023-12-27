@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+"""Generate random input tables."""
+
 # File:  mkrnd.py
 # Author:  mikolas
 # Created on:  Mon Aug 14 11:38:40 AM UTC 2023
@@ -7,8 +9,9 @@
 import sys
 import random
 
+
 def run_main():
-    """ run the whole thing """
+    """run the whole thing"""
     if len(sys.argv) != 4:
         print("Expected ORDER COUNT RANDOM-SEED")
         return 1
@@ -18,15 +21,21 @@ def run_main():
     random.seed(seed)
 
     for c in range(count):
-        with open(f"rnd_{seed}_{order}_{c}.out", 'w') as f:
+        with open(f"rnd_{seed}_{order}_{c}.out", encoding="utf-8", mode="w") as f:
             f.write(f"interpretation({order}, [number={count}, seed={seed}], [\n")
             f.write(" function(*(_,_), [\n")
             for i in range(order):
-                f.write(3*' ' + ','.join(map(str, [random.randint(0,order-1) for j in range(order)])))
+                f.write(
+                    3 * " "
+                    + ",".join(
+                        map(str, [random.randint(0, order - 1) for j in range(order)])
+                    )
+                )
                 if i + 1 < order:
-                    f.write(',\n')
-            f.write('])]).\n')
+                    f.write(",\n")
+            f.write("])]).\n")
 
+    return 0
 
 
 if __name__ == "__main__":
