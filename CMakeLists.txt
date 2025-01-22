@@ -11,7 +11,8 @@ endif()
 option(USE_CADICAL "Use cadical as the base solver" OFF)
 
 # Add sanitizer flags for C++ compiler for "Debug" configuration
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined,bool")
+set(CMAKE_CXX_FLAGS_DEBUG
+  "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address,undefined,bool")
 
 ## https://stackoverflow.com/questions/1435953/how-can-i-pass-git-sha1-to-compiler-as-definition-using-cmake
 # the commit's SHA1, and whether the building workspace was dirty or not
@@ -36,7 +37,8 @@ execute_process(COMMAND
   ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 # generate version.cpp
-configure_file("src/version.cpp.in" "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" @ONLY)
+configure_file("src/version.cpp.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" @ONLY)
 
 #######
 
@@ -53,10 +55,13 @@ include_directories(src)
 file(GLOB CPPSOURCES "src/*.cpp")
 file(GLOB CSOURCES "src/*.c")
 list(APPEND CPPSOURCES "${CMAKE_CURRENT_BINARY_DIR}/version.cpp")
- 
-add_executable(${CMAKE_PROJECT_NAME} ${CPPSOURCES} ${CSOURCES} ${GENERATED_SOURCES})
 
-if (USE_CADICAL)
+add_executable(${CMAKE_PROJECT_NAME}
+      ${CPPSOURCES}
+      ${CSOURCES}
+      ${GENERATED_SOURCES})
+
+if(USE_CADICAL)
   message(STATUS "Using cadical")
   include_directories(contrib/cadical)
   add_library(cadical STATIC IMPORTED GLOBAL)

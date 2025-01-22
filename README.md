@@ -6,12 +6,12 @@ is done using a SAT solver as described in [1].
 
 # Building
 
-On Linux , the `configure` script should download minisat and cadical
+On Linux, the `configure` script should download minisat and cadical
 and prepare the `build` folder.
 
 Run `./configure -h`  to see options for building  (for instance a switch to cadical).
 
-In a nutshell, it should be enough to do:
+In a nutshell, it should be enough to issue:
 ```
      ./configure && cd build && make
 ```
